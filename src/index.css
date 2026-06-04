@@ -42,46 +42,6 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
-/* ── Light theme overrides ── */
-.light {
-  --color-navy-950: #f8f9fa;
-  --color-navy-900: #f0f1f3;
-  --color-navy-850: #e8eaed;
-  --color-navy-800: #ffffff;
-  --color-navy-750: #fafafa;
-  --color-navy-700: #e2e5e9;
-  --color-navy-650: #d1d5db;
-  --color-navy-600: #c4c8cf;
-  --color-navy-550: #b0b4bd;
-  --color-navy-500: #9ca3af;
-  --color-navy-400: #6b7280;
-
-  --color-surface-base: #f8f9fa;
-  --color-surface-raised: #ffffff;
-  --color-surface-overlay: #e8eaed;
-  --color-surface-border: #d1d5db;
-  --color-surface-subtle: #e8eaed;
-  --color-surface-inset: #ffffff;
-  --color-surface-header: #f0f1f3;
-  --color-surface-hover: #e2e5e9;
-  --color-surface-muted: #e8eaed;
-  --color-surface-control: #d1d5db;
-  --color-surface-card: #ffffff;
-
-  --color-slate-100: #1e293b;
-  --color-slate-200: #334155;
-  --color-slate-300: #475569;
-  --color-slate-400: #64748b;
-  --color-slate-500: #94a3b8;
-
-  --color-white: #1a1a2e;
-}
-
-.light body {
-  color: #334155;
-  background-color: var(--color-surface-base);
-}
-
 body {
   color: #e2e8f0;
   background-color: var(--color-surface-base);
