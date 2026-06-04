@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import NavBarHeader from "./components/NavBarHeader";
 import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
@@ -6,19 +7,53 @@ import TreeVisualizer from "./components/TreeVisualizer";
 import GraphVisualizer from "./components/GraphVisualizer";
 import LearnPage from "./pages/LearnPage";
 
+const pageVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+};
+
+const pageTransition = {
+  duration: 0.2,
+  ease: "easeOut",
+};
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState("home");
 
+  const renderPage = () => {
+    switch (currentPage) {
+      case "home":
+        return <HomePage setCurrentPage={setCurrentPage} />;
+      case "tree-visualizer":
+        return <TreeVisualizer />;
+      case "graph-visualizer":
+        return <GraphVisualizer />;
+      case "learn":
+        return <LearnPage />;
+      default:
+        return <HomePage setCurrentPage={setCurrentPage} />;
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-screen bg-[#121212] text-slate-200 font-sans">
+    <div className="flex flex-col min-h-screen bg-navy-950 text-slate-200 font-sans">
       <NavBarHeader currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <main className="flex-grow">
-        {currentPage === "home" && <HomePage setCurrentPage={setCurrentPage} />}
-        {currentPage === "tree-visualizer" && <TreeVisualizer />}
-        {currentPage === "graph-visualizer" && <GraphVisualizer />}
-        {currentPage === "learn" && <LearnPage />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentPage}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            {renderPage()}
+          </motion.div>
+        </AnimatePresence>
       </main>
-      <Footer />
+      <Footer setCurrentPage={setCurrentPage} />
     </div>
   );
 }

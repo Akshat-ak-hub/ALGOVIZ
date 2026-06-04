@@ -1,10 +1,10 @@
 import React from "react";
-import { Binary, GitMerge, Split, Network } from "lucide-react";
+import { Binary, GitMerge, Split, Network, TreePine } from "lucide-react";
 
 export default function HomePage({ setCurrentPage }) {
   return (
-    <div className="bg-[#121212] min-h-[calc(100vh-130px)] flex flex-col">
-      <section className="relative px-6 py-20 md:py-24 flex flex-col items-center justify-center text-center overflow-hidden border-b border-[#1e1e1e]">
+    <div className="bg-navy-950 min-h-[calc(100vh-130px)] flex flex-col">
+      <section className="relative px-6 py-20 md:py-24 flex flex-col items-center justify-center text-center overflow-hidden border-b border-navy-800">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-cyan-500/10 rounded-full blur-[130px] pointer-events-none" />
         <div className="absolute top-1/3 left-1/4 w-[350px] h-[350px] bg-purple-500/5 rounded-full blur-[100px] pointer-events-none" />
 
@@ -23,7 +23,7 @@ export default function HomePage({ setCurrentPage }) {
             onClick={() => setCurrentPage("tree-visualizer")}
             className="px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(16,185,129,0.2)] cursor-pointer text-xs uppercase tracking-wider"
           >
-            🌳 Tree Visualizer
+            <TreePine size={16} /> Tree Visualizer
           </button>
           <button
             onClick={() => setCurrentPage("graph-visualizer")}
@@ -40,8 +40,8 @@ export default function HomePage({ setCurrentPage }) {
           Engineered for LeetCode & Interview Success
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-[#1a1a1a] border border-[#2e2e2e] p-6 rounded-2xl flex flex-col gap-3">
-            <h3 className="font-bold text-sm text-cyan-400 flex items-center gap-1.5 font-sans">
+          <div className="bg-navy-800 border border-navy-600 p-6 rounded-2xl flex flex-col gap-3">
+            <h3 className="font-bold text-sm text-neon-cyan flex items-center gap-1.5 font-sans">
               <Binary size={16} /> Tree Traversals
             </h3>
             <p className="text-slate-400 text-xs leading-relaxed font-sans">
@@ -49,7 +49,7 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="bg-[#1a1a1a] border border-[#2e2e2e] p-6 rounded-2xl flex flex-col gap-3">
+          <div className="bg-navy-800 border border-navy-600 p-6 rounded-2xl flex flex-col gap-3">
             <h3 className="font-bold text-sm text-purple-400 flex items-center gap-1.5 font-sans">
               <GitMerge size={16} /> LCA & Lifting
             </h3>
@@ -58,7 +58,7 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="bg-[#1a1a1a] border border-[#2e2e2e] p-6 rounded-2xl flex flex-col gap-3">
+          <div className="bg-navy-800 border border-navy-600 p-6 rounded-2xl flex flex-col gap-3">
             <h3 className="font-bold text-sm text-emerald-400 flex items-center gap-1.5 font-sans">
               <Split size={16} /> Kruskal & DSU
             </h3>
@@ -67,7 +67,7 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="bg-[#1a1a1a] border border-[#2e2e2e] p-6 rounded-2xl flex flex-col gap-3">
+          <div className="bg-navy-800 border border-navy-600 p-6 rounded-2xl flex flex-col gap-3">
             <h3 className="font-bold text-sm text-rose-400 flex items-center gap-1.5 font-sans">
               <Network size={16} /> Tarjan & Kosaraju
             </h3>

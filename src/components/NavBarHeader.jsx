@@ -1,7 +1,9 @@
 import React from "react";
-import { Home, GitBranch, Network, BookOpen } from "lucide-react";
+import { Home, GitBranch, Network, BookOpen, Sun, Moon } from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function NavBarHeader({ currentPage, setCurrentPage }) {
+  const { theme, toggleTheme } = useTheme();
   const navItems = [
     {
       id: "home",
@@ -30,7 +32,7 @@ export default function NavBarHeader({ currentPage, setCurrentPage }) {
       {/* Gradient Border */}
       <div className="h-[1px] bg-gradient-to-r from-transparent via-cyan-500/60 to-transparent" />
 
-      <nav className="backdrop-blur-xl bg-[#121212]/80 border-b border-white/5 px-8 py-4 flex items-center justify-between">
+      <nav className="backdrop-blur-xl bg-surface-base/80 border-b border-white/5 px-8 py-4 flex items-center justify-between">
         {/* Logo */}
         <div
           onClick={() => setCurrentPage("home")}
@@ -55,7 +57,7 @@ export default function NavBarHeader({ currentPage, setCurrentPage }) {
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center gap-2 bg-[#1b1b1b]/70 border border-[#2e2e2e] rounded-2xl p-1.5">
+        <div className="flex items-center gap-2 bg-surface-subtle/70 border border-surface-border rounded-2xl p-1.5">
           {navItems.map((item) => {
             const active = currentPage === item.id;
 
@@ -93,6 +95,18 @@ export default function NavBarHeader({ currentPage, setCurrentPage }) {
             );
           })}
         </div>
+
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          className="relative flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-slate-100 bg-surface-subtle/50 border border-surface-border hover:border-cyan-500/30 transition-all duration-200 cursor-pointer group"
+        >
+          <span className="absolute inset-0 rounded-xl bg-cyan-500/0 group-hover:bg-cyan-500/5 transition-all duration-200" />
+          <span className="relative z-10">
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </span>
+        </button>
       </nav>
     </header>
   );

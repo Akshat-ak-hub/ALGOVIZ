@@ -287,7 +287,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
           cycleFound = true;
           cycleEdges.add(item.edge.id);
           steps.push({
-            description: `⚠️ Directed Cycle Detected! Node ${node.label} points back to Node ${neighbor.label} which is on recursion stack.`,
+            description: `Directed Cycle Detected! Node ${node.label} points back to Node ${neighbor.label} which is on recursion stack.`,
             currentNode: node,
             visited: new Set(visited),
             frontier: [...recStack],
@@ -309,7 +309,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
           cycleFound = true;
           cycleEdges.add(item.edge.id);
           steps.push({
-            description: `⚠️ Undirected Cycle Detected! Node ${node.label} connects to visited Node ${neighbor.label} (excluding direct parent).`,
+            description: `Undirected Cycle Detected! Node ${node.label} connects to visited Node ${neighbor.label} (excluding direct parent).`,
             currentNode: node,
             visited: new Set(visited),
             frontier: [],
@@ -727,7 +727,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
       edge.state = EdgeState.IN_PATH;
 
       steps.push({
-        description: `⚠️ Negative Cycle Detected! Edge ${u.label}→${v.label} can be relaxed indefinitely (distance would drop below ${vDist}).`,
+        description: `Negative Cycle Detected! Edge ${u.label}→${v.label} can be relaxed indefinitely (distance would drop below ${vDist}).`,
         currentNode: u,
         visited: new Set([u.id, v.id]),
         distances: new Map(distances),

@@ -4,12 +4,22 @@ import {
   Pause,
   RotateCcw,
   ChevronRight,
+  ChevronLeft,
   Trash2,
   Shuffle,
   Activity,
   Table,
   Sparkles,
   Network,
+  Camera,
+  HelpCircle,
+  MousePointer,
+  ArrowUpFromDot,
+  Hand,
+  Zap,
+  Timer,
+  Terminal,
+  Move,
 } from "lucide-react";
 import { GraphModel, NodeState, EdgeState, Colors } from "../models/GraphModel";
 import {
@@ -25,11 +35,33 @@ import {
   runGraphTarjanBridges,
   runGraphDijkstra,
 } from "../algorithms/graphAlgorithms";
+import { useToast } from "./Toast";
+
+/* ── Speed label helper ── */
+const getSpeedLabel = (ms) => {
+  if (ms <= 100) return "Lightning";
+  if (ms <= 300) return "Fast";
+  if (ms <= 600) return "Normal";
+  if (ms <= 1200) return "Slow";
+  return "Step-by-Step";
+};
+
+/* ── Node state label helper for canvas overlay (Item 12) ── */
+const getNodeStateLabel = (state) => {
+  switch (state) {
+    case NodeState.CURRENT: return "Current";
+    case NodeState.VISITED: return "Visited";
+    case NodeState.IN_PATH: return "In Path";
+    case NodeState.SPECIAL: return "Special";
+    default: return null;
+  }
+};
 
 export default function GraphVisualizer() {
   const canvasRef = useRef(null);
   const graphRef = useRef(new GraphModel());
   const logContainerRef = useRef(null);
+  const { showToast } = useToast();
 
   const [activeAlgorithm, setActiveAlgorithm] = useState("dfs");
   const [sourceNodeId, setSourceNodeId] = useState("");
@@ -55,6 +87,7 @@ export default function GraphVisualizer() {
   const [statusBannerText, setStatusBannerText] = useState("");
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
   const [weightInputValue, setWeightInputValue] = useState(5);
+  const [showHelpOverlay, setShowHelpOverlay] = useState(false);
 
   const pendingEdgeRef = useRef(null);
   const canvasSizeRef = useRef({ width: 800, height: 450 });
@@ -68,6 +101,10 @@ export default function GraphVisualizer() {
   const stepsTimelineRef = useRef([]);
 
   const isTransposedRef = useRef(false);
+
+  const cameraRef = useRef({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
 
   const syncNodes = () => {
     setNodesList([...graphRef.current.nodes]);
@@ -133,12 +170,48 @@ export default function GraphVisualizer() {
     }
   }, [nodesList]);
 
+  /* ── Keyboard shortcuts (Item 7) ── */
+  useEffect(() => {
+    const handler = (e) => {
+      // Don't trigger when user is typing in inputs
+      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === " ") {
+        e.preventDefault();
+        if (isRunning && currentStepIdx < totalStepsCount) togglePlayPause();
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (isRunning) stepForward();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (isRunning) stepBackward();
+      }
+      if (e.key === "r" || e.key === "R") {
+        resetVisualizer();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isRunning, isPlaying, currentStepIdx, totalStepsCount]);
+
   const handleDirectedToggle = (directed) => {
     setIsDirected(directed);
     resetVisualizer();
   };
 
   const getCanvasMousePos = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) - cameraRef.current.x,
+      y: (e.clientY - rect.top) - cameraRef.current.y,
+    };
+  };
+
+  const getScreenMousePos = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
@@ -150,6 +223,16 @@ export default function GraphVisualizer() {
 
   const handleMouseDown = (e) => {
     if (isRunning) return;
+
+    if (e.button === 1) {
+      e.preventDefault();
+      const screenPos = getScreenMousePos(e);
+      isPanningRef.current = true;
+      panStartRef.current = { x: screenPos.x, y: screenPos.y };
+      document.body.style.cursor = "grabbing";
+      return;
+    }
+
     const pos = getCanvasMousePos(e);
     const clickedNode = graphRef.current.getNodeAt(pos.x, pos.y);
 
@@ -157,7 +240,7 @@ export default function GraphVisualizer() {
       e.preventDefault();
       if (clickedNode) {
         graphRef.current.removeNode(clickedNode);
-        addLog(`🗑 Deleted Node ${clickedNode.label}`, "system");
+        addLog(`Deleted Node ${clickedNode.label}`, "system");
         syncNodes();
       }
       return;
@@ -174,7 +257,7 @@ export default function GraphVisualizer() {
         }
       } else {
         const node = graphRef.current.addNode(pos.x, pos.y);
-        addLog(`➕ Added Node ${node.label} at (${Math.round(pos.x)}, ${Math.round(pos.y)})`, "system");
+        addLog(`Added Node ${node.label} at (${Math.round(pos.x)}, ${Math.round(pos.y)})`, "system");
         syncNodes();
       }
     }
@@ -182,12 +265,23 @@ export default function GraphVisualizer() {
 
   const handleMouseMove = (e) => {
     if (isRunning) return;
+
+    if (isPanningRef.current) {
+      const screenPos = getScreenMousePos(e);
+      const dx = screenPos.x - panStartRef.current.x;
+      const dy = screenPos.y - panStartRef.current.y;
+      panStartRef.current = { x: screenPos.x, y: screenPos.y };
+      cameraRef.current.x += dx;
+      cameraRef.current.y += dy;
+      drawCanvas();
+      return;
+    }
+
     const pos = getCanvasMousePos(e);
-    const { width, height } = canvasSizeRef.current;
 
     if (selectedNodeRef.current) {
-      selectedNodeRef.current.x = Math.max(22, Math.min(width - 22, pos.x));
-      selectedNodeRef.current.y = Math.max(22, Math.min(height - 22, pos.y));
+      selectedNodeRef.current.x = pos.x;
+      selectedNodeRef.current.y = pos.y;
       drawCanvas();
     } else if (isShiftDraggingRef.current) {
       currentDragMousePosRef.current = pos;
@@ -197,6 +291,12 @@ export default function GraphVisualizer() {
 
   const handleMouseUp = (e) => {
     if (isRunning) return;
+
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+      document.body.style.cursor = "";
+      return;
+    }
 
     if (isShiftDraggingRef.current && dragSourceNodeRef.current) {
       const pos = getCanvasMousePos(e);
@@ -239,9 +339,9 @@ export default function GraphVisualizer() {
         isDirected
       );
       if (edge) {
-        addLog(`🔗 Created edge (${pendingEdgeRef.current.source.label} ${isDirected ? "→" : "↔"} ${pendingEdgeRef.current.target.label}, w=${weight})`, "system");
+        addLog(`Created edge (${pendingEdgeRef.current.source.label} ${isDirected ? "→" : "↔"} ${pendingEdgeRef.current.target.label}, w=${weight})`, "system");
       } else {
-        addLog(`⚠️ Edge already exists between Node ${pendingEdgeRef.current.source.label} and Node ${pendingEdgeRef.current.target.label}`, "error");
+        addLog(`Edge already exists between Node ${pendingEdgeRef.current.source.label} and Node ${pendingEdgeRef.current.target.label}`, "error");
       }
     }
     setIsWeightModalOpen(false);
@@ -258,19 +358,29 @@ export default function GraphVisualizer() {
 
     ctx.save();
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, width, height);
 
-    // Grid lines
+    // Apply camera transform
+    ctx.translate(cameraRef.current.x, cameraRef.current.y);
+
+    ctx.clearRect(-cameraRef.current.x - 1, -cameraRef.current.y - 1, width + 2, height + 2);
+
+    // Grid lines — infinite relative to camera
+    const gridSize = 40;
+    const startX = Math.floor(-cameraRef.current.x / gridSize) * gridSize;
+    const startY = Math.floor(-cameraRef.current.y / gridSize) * gridSize;
+    const endX = -cameraRef.current.x + width + gridSize;
+    const endY = -cameraRef.current.y + height + gridSize;
+
     ctx.strokeStyle = Colors.grid;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    for (let x = 0; x < width; x += 40) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
+    for (let x = startX; x < endX; x += gridSize) {
+      ctx.moveTo(x, startY);
+      ctx.lineTo(x, endY);
     }
-    for (let y = 0; y < height; y += 40) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+    for (let y = startY; y < endY; y += gridSize) {
+      ctx.moveTo(startX, y);
+      ctx.lineTo(endX, y);
     }
     ctx.stroke();
 
@@ -394,6 +504,25 @@ export default function GraphVisualizer() {
         ctx.fillText(badgeStr, x, y + 31);
       }
 
+      // Node state label (Item 12)
+      const stateLabel = getNodeStateLabel(node.state);
+      if (stateLabel && !node.colorOverride) {
+        ctx.font = "bold 9px sans-serif";
+        const labelW = ctx.measureText(stateLabel).width;
+        const labelX = x;
+        const labelY = y - 32;
+
+        ctx.fillStyle = "rgba(10, 10, 10, 0.85)";
+        ctx.beginPath();
+        ctx.roundRect(labelX - labelW / 2 - 5, labelY - 6, labelW + 10, 13, 4);
+        ctx.fill();
+
+        ctx.fillStyle = nodeColor.fill;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(stateLabel, labelX, labelY);
+      }
+
       // Label
       ctx.fillStyle = "#FFFFFF";
       ctx.font = "bold 13px sans-serif";
@@ -407,7 +536,7 @@ export default function GraphVisualizer() {
 
   const runGraphAlgorithm = () => {
     if (graphRef.current.nodes.length === 0) {
-      alert("Please create a graph first!");
+      showToast("Please create a graph first!", "warning");
       return;
     }
 
@@ -415,7 +544,7 @@ export default function GraphVisualizer() {
       (n) => n.id.toString() === sourceNodeId.toString()
     );
     if (!startNode && (activeAlgorithm === "dfs" || activeAlgorithm === "bfs" || activeAlgorithm === "dijkstra" || activeAlgorithm === "bellman")) {
-      alert("Please select a valid source node!");
+      showToast("Please select a valid source node!", "warning");
       return;
     }
 
@@ -601,6 +730,34 @@ export default function GraphVisualizer() {
     renderStep(nextIdx, steps);
   };
 
+  /* ── Step backward (Item 7) ── */
+  const stepBackward = () => {
+    const steps = stepsTimelineRef.current;
+    if (!steps || steps.length === 0 || playbackIndexRef.current <= 0) return;
+
+    clearRunningInterval();
+    setIsPlaying(false);
+
+    const prevIdx = playbackIndexRef.current - 1;
+    playbackIndexRef.current = prevIdx;
+    setCurrentStepIdx(prevIdx + 1);
+    renderStep(prevIdx, steps);
+  };
+
+  /* ── Scrubber seek (Item 9) ── */
+  const seekToStep = (idx) => {
+    const steps = stepsTimelineRef.current;
+    if (!steps || steps.length === 0) return;
+
+    clearRunningInterval();
+    setIsPlaying(false);
+
+    const clampedIdx = Math.max(0, Math.min(idx, steps.length - 1));
+    playbackIndexRef.current = clampedIdx;
+    setCurrentStepIdx(clampedIdx + 1);
+    renderStep(clampedIdx, steps);
+  };
+
   const resetVisualizer = () => {
     clearRunningInterval();
     graphRef.current.resetStates();
@@ -630,7 +787,7 @@ export default function GraphVisualizer() {
     graphRef.current.generateRandom(count, width || 800, height || 450, isDirected);
     syncNodes();
     clearLog();
-    addLog(`🎲 Generated random connected graph with ${count} nodes (${isDirected ? "directed" : "undirected"}).`, "system");
+    addLog(`Generated random connected graph with ${count} nodes (${isDirected ? "directed" : "undirected"}).`, "system");
   };
 
   const clearGraph = () => {
@@ -638,30 +795,54 @@ export default function GraphVisualizer() {
     graphRef.current.clear();
     syncNodes();
     clearLog();
-    addLog("🗑 Graph cleared.", "system");
+    addLog("Graph cleared.", "system");
   };
 
+  /* ── Screenshot (Item 15) ── */
+  const captureScreenshot = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `graph-snapshot-${Date.now()}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    showToast("Screenshot saved!", "success");
+  };
+
+  /* ── Determine which legend items are active (Item 14) ── */
+  const getActiveLegendStates = () => {
+    if (!isRunning) return new Set(["UNVISITED", "CURRENT", "VISITED", "IN_PATH"]);
+    const activeStates = new Set();
+    for (const node of graphRef.current.nodes) {
+      activeStates.add(node.state);
+    }
+    return activeStates;
+  };
+
+  const activeLegendStates = getActiveLegendStates();
+  const progressPercent = totalStepsCount > 0 ? (currentStepIdx / totalStepsCount) * 100 : 0;
+
   return (
-    <div className="bg-[#121212] min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
+    <div className="bg-navy-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
       {/* Sidebar Controls */}
-      <aside className="w-full lg:w-[320px] flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1">
+      <aside className="w-full lg:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1">
         
         {/* Toggle directed/undirected Graph type */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-2 shadow-md">
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Graph Mode</label>
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => handleDirectedToggle(false)}
-              className={`text-xs py-1.5 font-bold rounded-lg cursor-pointer border ${
-                !isDirected ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400" : "border-transparent text-slate-400"
+              className={`text-xs py-2 font-bold rounded-lg cursor-pointer border transition-all duration-200 ${
+                !isDirected ? "bg-cyan-500/10 border-cyan-500/30 text-neon-cyan" : "border-transparent text-slate-400 hover:text-slate-300"
               }`}
             >
               Undirected
             </button>
             <button
               onClick={() => handleDirectedToggle(true)}
-              className={`text-xs py-1.5 font-bold rounded-lg cursor-pointer border ${
-                isDirected ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-400" : "border-transparent text-slate-400"
+              className={`text-xs py-2 font-bold rounded-lg cursor-pointer border transition-all duration-200 ${
+                isDirected ? "bg-cyan-500/10 border-cyan-500/30 text-neon-cyan" : "border-transparent text-slate-400 hover:text-slate-300"
               }`}
             >
               Directed
@@ -670,15 +851,15 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Algorithm selection dropdown */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-[#2e2e2e] pb-2 flex items-center gap-1.5">
-            <Network size={13} className="text-cyan-400" />
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
+            <Network size={13} className="text-neon-cyan" />
             Select Algorithm
           </h2>
           <select
             value={activeAlgorithm}
             onChange={(e) => setActiveAlgorithm(e.target.value)}
-            className="bg-[#121212] border border-[#2e2e2e] rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer outline-none focus:border-cyan-500"
+            className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer outline-none"
           >
             <optgroup label="Traversals & Order">
               <option value="dfs">DFS Traversal</option>
@@ -707,14 +888,14 @@ export default function GraphVisualizer() {
             activeAlgorithm === "dijkstra" ||
             activeAlgorithm === "bellman" ||
             activeAlgorithm === "scc") && (
-            <div className="flex flex-col gap-2 mt-1">
+            <div className="flex flex-col gap-3 mt-1">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Source Node</label>
                 <select
                   value={sourceNodeId}
                   onChange={(e) => setSourceNodeId(e.target.value)}
                   disabled={isRunning}
-                  className="bg-[#121212] border border-[#2e2e2e] rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
+                  className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
                 >
                   {nodesList.length === 0 ? (
                     <option value="" disabled>No nodes available</option>
@@ -733,7 +914,7 @@ export default function GraphVisualizer() {
                     value={destNodeId}
                     onChange={(e) => setDestNodeId(e.target.value)}
                     disabled={isRunning}
-                    className="bg-[#121212] border border-[#2e2e2e] rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
+                    className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
                   >
                     <option value="all">All nodes</option>
                     {nodesList.map((n) => (
@@ -748,7 +929,7 @@ export default function GraphVisualizer() {
           <button
             onClick={runGraphAlgorithm}
             disabled={nodesList.length === 0}
-            className="w-full flex items-center justify-center gap-1.5 bg-[#00897b] hover:bg-[#00796b] text-white font-bold text-xs py-2.5 px-4 rounded-lg cursor-pointer transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-4 rounded-lg cursor-pointer transition duration-200"
           >
             <Sparkles size={13} />
             Run Algorithm
@@ -756,7 +937,7 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Speed Controls */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-2.5 shadow-md">
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
           <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Playback speed</label>
           <input
             type="range"
@@ -765,35 +946,61 @@ export default function GraphVisualizer() {
             step="50"
             value={speedMs}
             onChange={(e) => setSpeedMs(parseInt(e.target.value, 10))}
-            className="w-full h-1 bg-[#2d2d2d] rounded appearance-none cursor-pointer accent-cyan-500"
+            className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
           />
           <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-            <span>Fast</span>
-            <span>Current: {speedMs}ms</span>
-            <span>Slow</span>
+            <span className="flex items-center gap-1"><Zap size={11} /> Fast</span>
+            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 rounded text-neon-cyan">{getSpeedLabel(speedMs)} · {speedMs}ms</span>
+            <span className="flex items-center gap-1"><Timer size={11} /> Slow</span>
           </div>
         </div>
 
         {/* Control Button panel */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-2 shadow-md">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={stepBackward}
+              disabled={!isRunning || currentStepIdx <= 1}
+              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+            >
+              <ChevronLeft size={12} />
+              Back
+            </button>
             <button
               onClick={togglePlayPause}
               disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-3 rounded-lg cursor-pointer"
+              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
             >
               {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-              {isPlaying ? "Pause" : "Resume"}
+              {isPlaying ? "Pause" : "Play"}
             </button>
             <button
               onClick={stepForward}
               disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-3 rounded-lg cursor-pointer"
+              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
             >
+              Next
               <ChevronRight size={12} />
-              Step
             </button>
           </div>
+
+          {/* Step scrubber (Item 9) */}
+          {isRunning && totalStepsCount > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <input
+                type="range"
+                min="0"
+                max={totalStepsCount - 1}
+                value={playbackIndexRef.current >= 0 ? playbackIndexRef.current : 0}
+                onChange={(e) => seekToStep(parseInt(e.target.value, 10))}
+                className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
+              />
+              <div className="text-center text-[9px] font-bold text-slate-500">
+                Step {currentStepIdx} / {totalStepsCount}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={resetVisualizer}
             className="w-full flex items-center justify-center gap-1.5 bg-rose-600/10 border border-rose-600/30 hover:bg-rose-600/20 text-rose-400 font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
@@ -804,9 +1011,9 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Graph Editor Controls */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-[#2e2e2e] pb-2 flex items-center gap-1.5">
-            <Activity size={13} className="text-cyan-400" />
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
+            <Activity size={13} className="text-neon-cyan" />
             Graph Editor
           </h2>
           <div className="flex items-center justify-between gap-4">
@@ -818,7 +1025,7 @@ export default function GraphVisualizer() {
               value={nodeCountSetting}
               onChange={(e) => setNodeCountSetting(e.target.value)}
               disabled={isRunning}
-              className="w-16 bg-[#121212] border border-[#2e2e2e] rounded-lg text-slate-200 text-xs px-2 py-1 text-center outline-none focus:border-cyan-500"
+              className="w-16 bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-2 py-1 text-center outline-none"
             />
           </div>
           <button
@@ -832,32 +1039,32 @@ export default function GraphVisualizer() {
           <button
             onClick={clearGraph}
             disabled={isRunning}
-            className="w-full flex items-center justify-center gap-1.5 bg-zinc-700 hover:bg-zinc-650 text-slate-200 font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 text-slate-200 font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
           >
             <Trash2 size={12} />
             Clear Graph
           </button>
         </div>
 
-        {/* Legend */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-2.5 shadow-md flex-shrink-0 mb-2">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-[#2e2e2e] pb-2">
+        {/* Legend (Item 14 — synchronized) */}
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md flex-shrink-0 mb-2">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2">
             Legend
           </h2>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("UNVISITED") ? "opacity-100" : "opacity-25"}`}>
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
               <span className="text-slate-400 font-medium">Unvisited</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("CURRENT") ? "opacity-100" : "opacity-25"}`}>
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
               <span className="text-slate-400 font-medium">Current Node</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("VISITED") ? "opacity-100" : "opacity-25"}`}>
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-[0_0_6px_#06b6d4]" />
               <span className="text-slate-400 font-medium">Visited</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("IN_PATH") ? "opacity-100" : "opacity-25"}`}>
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_#ef4444]" />
               <span className="text-slate-400 font-medium">Tree Path</span>
             </div>
@@ -868,33 +1075,89 @@ export default function GraphVisualizer() {
       {/* Main Canvas & Separate Dedicated Workspace for Tables & Logs */}
       <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
         {/* Canvas panel */}
-        <div className="bg-[#272727] border border-[#2e2e2e] rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[350px]">
+        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[350px]">
+          {/* Step progress bar (Item 8) */}
+          {isRunning && (
+            <div className="absolute top-0 left-0 right-0 h-1 bg-navy-600 z-20">
+              <div
+                className="h-full bg-cyan-500 rounded-r transition-all duration-300 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          )}
+
           <canvas
             ref={canvasRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            className="block cursor-crosshair max-w-full"
+            onMouseLeave={() => {
+              if (isPanningRef.current) {
+                isPanningRef.current = false;
+                document.body.style.cursor = "";
+              }
+              selectedNodeRef.current = null;
+              cancelShiftDragging();
+            }}
+            className="block max-w-full"
             onContextMenu={(e) => e.preventDefault()}
           />
 
-          {/* Help Overlay when Canvas is empty */}
-          {nodesList.length === 0 && (
-            <div className="absolute inset-0 bg-[#121212]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 text-center pointer-events-none p-6">
-              <p className="text-sm font-semibold text-slate-300">
-                🖱 &nbsp;Click anywhere to add a Node
-              </p>
-              <p className="text-sm font-semibold text-slate-300">
-                ⇧ &nbsp;Shift + Drag between nodes to connect Edges
-              </p>
-              <p className="text-sm font-semibold text-slate-300">
-                ✋ &nbsp;Drag a node to reposition it
-              </p>
-              <p className="text-sm font-semibold text-slate-300">
-                🗑 &nbsp;Right-click a node to delete it
-              </p>
-              <div className="h-[1px] bg-[#2e2e2e] my-1 w-40" />
-              <p className="text-cyan-400 font-bold text-sm">
+          {/* Canvas toolbar */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
+            <button
+              onClick={captureScreenshot}
+              title="Save screenshot"
+              className="p-1.5 bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg text-slate-400 hover:text-neon-cyan hover:border-cyan-500/30 cursor-pointer transition-all duration-200"
+            >
+              <Camera size={14} />
+            </button>
+            <button
+              onClick={() => setShowHelpOverlay(!showHelpOverlay)}
+              title="Canvas help"
+              className={`p-1.5 bg-navy-950/80 backdrop-blur-sm border rounded-lg cursor-pointer transition-all duration-200 ${
+                showHelpOverlay ? "border-cyan-500/30 text-neon-cyan" : "border-navy-600 text-slate-400 hover:text-neon-cyan hover:border-cyan-500/30"
+              }`}
+            >
+              <HelpCircle size={14} />
+            </button>
+          </div>
+
+          {/* Help Overlay when Canvas is empty OR help is toggled (Items 5 + 10) */}
+          {(nodesList.length === 0 || showHelpOverlay) && (
+            <div className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-center pointer-events-none p-6 z-10">
+              <div className="flex items-center gap-3 animate-gentle-pulse">
+                <MousePointer size={16} className="text-neon-cyan" />
+                <p className="text-sm font-semibold text-slate-300">
+                  Click anywhere to add a Node
+                </p>
+              </div>
+              <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.15s" }}>
+                <ArrowUpFromDot size={16} className="text-neon-cyan" />
+                <p className="text-sm font-semibold text-slate-300">
+                  Shift + Drag between nodes to connect Edges
+                </p>
+              </div>
+              <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.3s" }}>
+                <Hand size={16} className="text-neon-cyan" />
+                <p className="text-sm font-semibold text-slate-300">
+                  Drag a node to reposition it
+                </p>
+              </div>
+              <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.45s" }}>
+                <Trash2 size={16} className="text-rose-400" />
+                <p className="text-sm font-semibold text-slate-300">
+                  Right-click a node to delete it
+                </p>
+              </div>
+              <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.6s" }}>
+                <Move size={16} className="text-neon-cyan" />
+                <p className="text-sm font-semibold text-slate-300">
+                  Middle-click + drag to pan infinite canvas
+                </p>
+              </div>
+              <div className="h-[1px] bg-navy-600 my-1 w-40" />
+              <p className="text-neon-cyan font-bold text-sm">
                 Or click "Random Graph" to auto-build!
               </p>
             </div>
@@ -902,7 +1165,7 @@ export default function GraphVisualizer() {
 
           {/* Top Status execution banner */}
           {isRunning && (
-            <div className="absolute top-4 left-4 right-4 bg-[#121212]/90 backdrop-blur-md border border-[#2e2e2e] rounded-xl p-3 shadow-md pointer-events-none z-10">
+            <div className="absolute top-6 left-4 right-4 bg-navy-950/90 backdrop-blur-md border border-navy-600 rounded-xl p-3 shadow-md pointer-events-none z-10">
               <span className="text-xs font-bold text-amber-400 leading-relaxed block text-center">
                 {statusBannerText}
               </span>
@@ -910,12 +1173,20 @@ export default function GraphVisualizer() {
           )}
         </div>
 
+        {/* Keyboard shortcuts hint (Item 7) */}
+        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0">
+          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
+          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
+          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
+          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
+        </div>
+
         {/* Separate Workspace for DSU or Distance Tables (Requested by user to prevent overlaps) */}
         {((activeAlgorithm === "dsu" && dsuParentsList.length > 0) ||
           ((activeAlgorithm === "dijkstra" || activeAlgorithm === "bellman") && distanceMap.size > 0)) && (
-          <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl p-4 flex flex-col gap-3 shadow-md">
-            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-[#2e2e2e] pb-2 flex items-center gap-1.5">
-              <Table size={14} className="text-cyan-400" />
+          <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
+              <Table size={14} className="text-neon-cyan" />
               Algorithm Results & Analytics
             </h3>
 
@@ -926,20 +1197,20 @@ export default function GraphVisualizer() {
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Disjoint Set Union (DSU) Mapping
                   </h4>
-                  <div className="overflow-x-auto border border-[#2d2d2d] rounded bg-[#121212] max-h-[200px]">
+                  <div className="overflow-x-auto border border-navy-600 rounded bg-navy-950 max-h-[200px]">
                     <table className="w-full text-[10px] text-center border-collapse font-mono">
-                      <thead className="bg-[#1a1a1a] text-cyan-400 border-b border-[#2e2e2e] text-[8px] uppercase tracking-wider">
+                      <thead className="bg-navy-800 text-neon-cyan border-b border-navy-600 text-[8px] uppercase tracking-wider">
                         <tr>
                           <th className="p-2 font-sans font-bold">Node Value</th>
                           <th className="p-2 font-sans font-bold">Representative Parent</th>
                           <th className="p-2 font-sans font-bold">Set Rank</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#242424] text-slate-300">
+                      <tbody className="divide-y divide-navy-700 text-slate-300">
                         {dsuParentsList.map((row) => (
-                          <tr key={row.nodeId} className="hover:bg-[#202020]">
+                          <tr key={row.nodeId} className="hover:bg-navy-700">
                             <td className="p-2 font-bold text-slate-400">{row.nodeVal}</td>
-                            <td className="p-2 text-cyan-400 font-bold">{row.pVal}</td>
+                            <td className="p-2 text-neon-cyan font-bold">{row.pVal}</td>
                             <td className="p-2">{row.rankVal}</td>
                           </tr>
                         ))}
@@ -955,16 +1226,16 @@ export default function GraphVisualizer() {
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Shortest Path Distances From Source Node
                   </h4>
-                  <div className="overflow-x-auto border border-[#2d2d2d] rounded bg-[#121212] max-h-[200px]">
+                  <div className="overflow-x-auto border border-navy-600 rounded bg-navy-950 max-h-[200px]">
                     <table className="w-full text-[10px] text-left border-collapse font-mono">
-                      <thead className="bg-[#1a1a1a] text-cyan-400 border-b border-[#2e2e2e] text-[9px] uppercase tracking-wider">
+                      <thead className="bg-navy-800 text-neon-cyan border-b border-navy-600 text-[9px] uppercase tracking-wider">
                         <tr>
                           <th className="p-2 font-bold font-sans">Target Node</th>
                           <th className="p-2 font-bold font-sans">Computed Distance</th>
                           <th className="p-2 font-bold font-sans">Predecessor Node</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#242424]">
+                      <tbody className="divide-y divide-navy-700">
                         {[...nodesList]
                           .sort((a, b) => a.id - b.id)
                           .map((n) => {
@@ -984,9 +1255,9 @@ export default function GraphVisualizer() {
                             }
 
                             return (
-                              <tr key={n.id} className="hover:bg-[#202020]">
+                              <tr key={n.id} className="hover:bg-navy-700">
                                 <td className="p-2 font-bold text-slate-300">Node {n.label}</td>
-                                <td className={`p-2 font-bold ${dist === Infinity ? "text-slate-500" : "text-cyan-400"}`}>
+                                <td className={`p-2 font-bold ${dist === Infinity ? "text-slate-500" : "text-neon-cyan"}`}>
                                   {distStr}
                                 </td>
                                 <td className="p-2 text-slate-400">{prevLabel}</td>
@@ -1003,10 +1274,10 @@ export default function GraphVisualizer() {
         )}
 
         {/* Live Execution Logs panel */}
-        <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-xl flex flex-col h-[180px] overflow-hidden shadow-md flex-shrink-0">
-          <div className="bg-[#161616] border-b border-[#2e2e2e] px-4 py-2 flex justify-between items-center">
+        <div className="bg-navy-800 border border-navy-600 rounded-xl flex flex-col h-[180px] overflow-hidden shadow-md flex-shrink-0">
+          <div className="bg-navy-900 border-b border-navy-600 px-4 py-2 flex justify-between items-center">
             <h3 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-              📟 Live Graph Execution Log
+              <Terminal size={13} className="text-neon-cyan" /> Live Graph Execution Log
             </h3>
             <button
               onClick={clearLog}
@@ -1018,7 +1289,7 @@ export default function GraphVisualizer() {
 
           <div
             ref={logContainerRef}
-            className="flex-grow bg-[#141414] p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 text-slate-300"
+            className="flex-grow bg-navy-900 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 text-slate-300"
           >
             {executionLogs.map((log, index) => {
               let textClass = "text-slate-400";
@@ -1041,7 +1312,7 @@ export default function GraphVisualizer() {
       {/* Edge Weight modal overlay */}
       {isWeightModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl p-6 w-[280px] flex flex-col gap-4 shadow-xl">
+          <div className="bg-navy-800 border border-navy-600 rounded-2xl p-6 w-[280px] flex flex-col gap-4 shadow-xl">
             <h3 className="font-bold text-slate-200 text-sm">Enter Edge Weight</h3>
             <p className="text-slate-400 text-xs leading-relaxed font-sans">
               Specify path cost (1 to 99):
@@ -1052,7 +1323,7 @@ export default function GraphVisualizer() {
               max="99"
               value={weightInputValue}
               onChange={(e) => setWeightInputValue(e.target.value)}
-              className="w-full bg-[#121212] border border-[#2e2e2e] rounded-lg text-slate-100 text-xs px-3 py-2 outline-none focus:border-cyan-500 text-center"
+              className="w-full bg-navy-950 border border-navy-600 rounded-lg text-slate-100 text-xs px-3 py-2 outline-none text-center"
               onKeyDown={(e) => {
                 if (e.key === "Enter") addEdgeWeightConfirm();
                 if (e.key === "Escape") addEdgeWeightCancel();
@@ -1062,13 +1333,13 @@ export default function GraphVisualizer() {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={addEdgeWeightCancel}
-                className="px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-[#2d2d2d] rounded-lg cursor-pointer transition duration-150 font-sans"
+                className="px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-navy-700 rounded-lg cursor-pointer transition duration-150 font-sans"
               >
                 Cancel
               </button>
               <button
                 onClick={addEdgeWeightConfirm}
-                className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-lg cursor-pointer transition duration-150 font-sans"
+                className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-lg cursor-pointer transition duration-150 font-sans"
               >
                 Add Edge
               </button>
