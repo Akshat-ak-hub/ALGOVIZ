@@ -23,7 +23,7 @@ export default function HomePage({ setCurrentPage }) {
             onClick={() => setCurrentPage("tree-visualizer")}
             className="px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(16,185,129,0.2)] cursor-pointer text-xs uppercase tracking-wider"
           >
-            <TreePine size={16} /> Tree Visualizer
+             Tree Visualizer
           </button>
           <button
             onClick={() => setCurrentPage("graph-visualizer")}
