@@ -83,7 +83,7 @@ function postorder(node):
     summary: "Calculate the height (depth) and longest path (diameter) in a tree in a single pass.",
     timeComplexity: { best: "O(N)", average: "O(N)", worst: "O(N)" },
     spaceComplexity: "O(H) recursion stack depth",
-    explanation: "The **height** of a tree node is the length of the longest path from that node to a leaf. The **diameter** (or width) of a tree is the length of the longest path between any two nodes in a tree. This path may or may not pass through the root.\n\nBy calculating height recursively bottom-up, we can compute the diameter at each node as: \`diameter = left_height + right_height\`. We maintain a global maximum diameter throughout the traversal.",
+    explanation: "The **height** of a tree node is the length of the longest path from that node to a leaf. The **diameter** (or width) of a tree is the length of the longest path between any two nodes in a tree. This path may or may not pass through the root.\n\nBy calculating height recursively bottom-up, we can compute the diameter at each node as: `diameter = left_height + right_height`. We maintain a global maximum diameter throughout the traversal.",
     steps: [
       "Create a global variable `maxDiameter = 0`.",
       "Define a recursive helper function `getHeight(node)` which returns the height of the subtree at `node`.",
@@ -184,7 +184,7 @@ function getHeight(node):
     summary: "Precompute binary jumps (ancestors of powers of 2) to answer LCA/ancestor queries in logarithmic time.",
     timeComplexity: { best: "O(log N) per query", average: "O(log N) per query", worst: "O(log N) per query (O(N log N) preprocessing)" },
     spaceComplexity: "O(N log N) storage matrix",
-    explanation: "Binary Lifting is a powerful dynamic programming technique on trees. By precomputing a table \`up[u][i]\` which stores the $2^i$-th ancestor of node $u$, we can jump up the tree by powers of 2. \n\nThis makes finding the $k$-th ancestor or querying the Lowest Common Ancestor (LCA) extremely fast ($O(\log N)$) instead of doing linear traversals. It is commonly used in competitive programming and large tree structures.",
+    explanation: "Binary Lifting is a powerful dynamic programming technique on trees. By precomputing a table `up[u][i]` which stores the $2^i$-th ancestor of node $u$, we can jump up the tree by powers of 2. \n\nThis makes finding the $k$-th ancestor or querying the Lowest Common Ancestor (LCA) extremely fast ($O(log N)$) instead of doing linear traversals. It is commonly used in competitive programming and large tree structures.",
     steps: [
       "Perform a DFS traversal to calculate the direct parent (2^0 ancestor) and depth of every node.",
       "Initialize a table `up[N][LOG_N]` where `up[u][0] = parent[u]`.",

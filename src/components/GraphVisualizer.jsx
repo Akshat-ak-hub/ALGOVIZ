@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Play,
   Pause,
@@ -35,7 +35,23 @@ import {
   runGraphTarjanBridges,
   runGraphDijkstra,
 } from "../algorithms/graphAlgorithms";
-import { useToast } from "./Toast";
+import { useToast } from "../hooks/useToast";
+import CodePanel from "./CodePanel";
+
+/* ── Algorithm title lookup for the code panel header ── */
+const ALGORITHM_TITLES = {
+  dfs: "DFS Traversal",
+  bfs: "BFS Traversal",
+  topo: "Topological Sort (Kahn's)",
+  cycle: "Cycle Detection",
+  dsu: "DSU Operations",
+  "mst-kruskal": "Kruskal's MST",
+  "mst-prim": "Prim's MST",
+  bellman: "Bellman-Ford",
+  scc: "Kosaraju SCC",
+  bridges: "Tarjan's Bridges",
+  dijkstra: "Dijkstra's Algorithm",
+};
 
 /* ── Speed label helper ── */
 const getSpeedLabel = (ms) => {
@@ -88,27 +104,28 @@ export default function GraphVisualizer() {
   const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
   const [weightInputValue, setWeightInputValue] = useState(5);
   const [showHelpOverlay, setShowHelpOverlay] = useState(false);
+  const [currentCodeLine, setCurrentCodeLine] = useState(null);
 
   const pendingEdgeRef = useRef(null);
-  const canvasSizeRef = useRef({ width: 800, height: 450 });
+  const canvasSizeRef = useRef({ width: 800, height: 360 });
   const intervalIdRef = useRef(null);
   const playbackIndexRef = useRef(-1);
   const selectedNodeRef = useRef(null);
   const dragSourceNodeRef = useRef(null);
   const currentDragMousePosRef = useRef(null);
   const isShiftDraggingRef = useRef(false);
-  const updateTriggerRef = useRef(null);
   const stepsTimelineRef = useRef([]);
 
   const isTransposedRef = useRef(false);
 
-  const cameraRef = useRef({ x: 0, y: 0 });
+  const cameraRef = useRef({ x: 0, y: 0, zoom: 1 });
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
 
+  const [cursorMode, setCursorMode] = useState("default");
+
   const syncNodes = () => {
     setNodesList([...graphRef.current.nodes]);
-    updateTriggerRef.current = Math.random();
   };
 
   const addLog = (text, type = "step") => {
@@ -119,83 +136,6 @@ export default function GraphVisualizer() {
     setExecutionLogs([]);
   };
 
-  useEffect(() => {
-    drawCanvas();
-  }, [updateTriggerRef.current, distanceMap, predecessorMap, dfnMap, lowMap]);
-
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [executionLogs]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-
-      // Restrict max canvas height to keep layout tidy
-      const parentWidth = rect.width || 800;
-      const parentHeight = 400; 
-
-      canvas.width = parentWidth * dpr;
-      canvas.height = parentHeight * dpr;
-      canvas.style.width = `${parentWidth}px`;
-      canvas.style.height = `${parentHeight}px`;
-
-      canvasSizeRef.current = { width: parentWidth, height: parentHeight };
-      drawCanvas();
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    generateRandomGraph();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      clearRunningInterval();
-    };
-  }, [isDirected]);
-
-  useEffect(() => {
-    if (nodesList.length > 0) {
-      if (!sourceNodeId || !nodesList.some((n) => n.id.toString() === sourceNodeId.toString())) {
-        setSourceNodeId(nodesList[0].id.toString());
-      }
-    } else {
-      setSourceNodeId("");
-    }
-  }, [nodesList]);
-
-  /* ── Keyboard shortcuts (Item 7) ── */
-  useEffect(() => {
-    const handler = (e) => {
-      // Don't trigger when user is typing in inputs
-      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
-
-      if (e.key === " ") {
-        e.preventDefault();
-        if (isRunning && currentStepIdx < totalStepsCount) togglePlayPause();
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        if (isRunning) stepForward();
-      }
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        if (isRunning) stepBackward();
-      }
-      if (e.key === "r" || e.key === "R") {
-        resetVisualizer();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isRunning, isPlaying, currentStepIdx, totalStepsCount]);
-
   const handleDirectedToggle = (directed) => {
     setIsDirected(directed);
     resetVisualizer();
@@ -205,9 +145,10 @@ export default function GraphVisualizer() {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
+    const z = cameraRef.current.zoom || 1;
     return {
-      x: (e.clientX - rect.left) - cameraRef.current.x,
-      y: (e.clientY - rect.top) - cameraRef.current.y,
+      x: (e.clientX - rect.left - cameraRef.current.x) / z,
+      y: (e.clientY - rect.top - cameraRef.current.y) / z,
     };
   };
 
@@ -229,7 +170,7 @@ export default function GraphVisualizer() {
       const screenPos = getScreenMousePos(e);
       isPanningRef.current = true;
       panStartRef.current = { x: screenPos.x, y: screenPos.y };
-      document.body.style.cursor = "grabbing";
+      setCursorMode("grabbing");
       return;
     }
 
@@ -294,7 +235,7 @@ export default function GraphVisualizer() {
 
     if (isPanningRef.current) {
       isPanningRef.current = false;
-      document.body.style.cursor = "";
+      setCursorMode("default");
       return;
     }
 
@@ -317,6 +258,31 @@ export default function GraphVisualizer() {
     isShiftDraggingRef.current = false;
     dragSourceNodeRef.current = null;
     currentDragMousePosRef.current = null;
+    drawCanvas();
+  };
+
+  /* ── Wheel / trackpad pinch zoom (Item: zoom to cursor) ── */
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseScreenX = e.clientX - rect.left;
+    const mouseScreenY = e.clientY - rect.top;
+
+    const z = cameraRef.current.zoom || 1;
+    // Trackpad pinch fires wheel with ctrlKey; treat as smaller deltaY
+    const intensity = e.ctrlKey ? 0.01 : 0.0015;
+    const delta = -e.deltaY * intensity;
+    const newZoom = Math.min(3, Math.max(0.25, z * Math.exp(delta)));
+
+    // Keep world point under cursor fixed:
+    // worldX = (mouseScreenX - cameraX) / zoom  =>  cameraX = mouseScreenX - worldX * newZoom
+    const worldX = (mouseScreenX - cameraRef.current.x) / z;
+    const worldY = (mouseScreenY - cameraRef.current.y) / z;
+    cameraRef.current.x = mouseScreenX - worldX * newZoom;
+    cameraRef.current.y = mouseScreenY - worldY * newZoom;
+    cameraRef.current.zoom = newZoom;
     drawCanvas();
   };
 
@@ -355,21 +321,25 @@ export default function GraphVisualizer() {
     const ctx = canvas.getContext("2d");
     const { width, height } = canvasSizeRef.current;
     const dpr = window.devicePixelRatio || 1;
+    const z = cameraRef.current.zoom || 1;
 
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // Apply camera transform
-    ctx.translate(cameraRef.current.x, cameraRef.current.y);
+    // Clear in screen space (before camera transform)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
 
-    ctx.clearRect(-cameraRef.current.x - 1, -cameraRef.current.y - 1, width + 2, height + 2);
+    // Apply camera transform: translate then scale
+    ctx.translate(cameraRef.current.x, cameraRef.current.y);
+    ctx.scale(z, z);
 
     // Grid lines — infinite relative to camera
     const gridSize = 40;
-    const startX = Math.floor(-cameraRef.current.x / gridSize) * gridSize;
-    const startY = Math.floor(-cameraRef.current.y / gridSize) * gridSize;
-    const endX = -cameraRef.current.x + width + gridSize;
-    const endY = -cameraRef.current.y + height + gridSize;
+    const startX = Math.floor(-cameraRef.current.x / z / gridSize) * gridSize;
+    const startY = Math.floor(-cameraRef.current.y / z / gridSize) * gridSize;
+    const endX = (-cameraRef.current.x) / z + width / z + gridSize;
+    const endY = (-cameraRef.current.y) / z + height / z + gridSize;
 
     ctx.strokeStyle = Colors.grid;
     ctx.lineWidth = 0.5;
@@ -570,7 +540,7 @@ export default function GraphVisualizer() {
         endNode
       );
     } else if (activeAlgorithm === "topo") {
-      steps = runGraphTopo(graphRef.current.nodes, graphRef.current.edges, startNode);
+      steps = runGraphTopo(graphRef.current.nodes, graphRef.current.edges);
     } else if (activeAlgorithm === "cycle") {
       steps = runGraphCycleDetection(graphRef.current.nodes, graphRef.current.edges, isDirected);
     } else if (activeAlgorithm === "dsu") {
@@ -582,7 +552,7 @@ export default function GraphVisualizer() {
     } else if (activeAlgorithm === "bellman") {
       steps = runGraphBellmanFord(graphRef.current.nodes, graphRef.current.edges, startNode);
     } else if (activeAlgorithm === "scc") {
-      steps = runGraphSCCKosaraju(graphRef.current.nodes, graphRef.current.edges, startNode);
+      steps = runGraphSCCKosaraju(graphRef.current.nodes, graphRef.current.edges);
     } else if (activeAlgorithm === "bridges") {
       steps = runGraphTarjanBridges(graphRef.current.nodes, graphRef.current.edges);
     }
@@ -624,6 +594,7 @@ export default function GraphVisualizer() {
     const step = steps[idx];
     addLog(step.description, "step");
     setStatusBannerText(step.description);
+    setCurrentCodeLine(step.codeLine ?? null);
 
     isTransposedRef.current = !!step.isTransposed;
 
@@ -771,6 +742,7 @@ export default function GraphVisualizer() {
 
     setIsRunning(false);
     setIsPlaying(false);
+    setCurrentCodeLine(null);
     clearLog();
     addLog("States reset. Editor enabled.", "system");
     syncNodes();
@@ -784,7 +756,7 @@ export default function GraphVisualizer() {
     setNodeCountSetting(count);
 
     const { width, height } = canvasSizeRef.current;
-    graphRef.current.generateRandom(count, width || 800, height || 450, isDirected);
+    graphRef.current.generateRandom(count, width || 800, height || 360, isDirected);
     syncNodes();
     clearLog();
     addLog(`Generated random connected graph with ${count} nodes (${isDirected ? "directed" : "undirected"}).`, "system");
@@ -809,17 +781,116 @@ export default function GraphVisualizer() {
     showToast("Screenshot saved!", "success");
   };
 
-  /* ── Determine which legend items are active (Item 14) ── */
-  const getActiveLegendStates = () => {
-    if (!isRunning) return new Set(["UNVISITED", "CURRENT", "VISITED", "IN_PATH"]);
-    const activeStates = new Set();
-    for (const node of graphRef.current.nodes) {
-      activeStates.add(node.state);
-    }
-    return activeStates;
-  };
+  /* ── Effects (placed after all function declarations) ── */
 
-  const activeLegendStates = getActiveLegendStates();
+  useEffect(() => {
+    drawCanvas();
+  }, [nodesList, distanceMap, predecessorMap, dfnMap, lowMap]);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [executionLogs]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      const parentWidth = rect.width || 800;
+      const parentHeight = 360;
+
+      canvas.width = parentWidth * dpr;
+      canvas.height = parentHeight * dpr;
+      canvas.style.width = `${parentWidth}px`;
+      canvas.style.height = `${parentHeight}px`;
+
+      canvasSizeRef.current = { width: parentWidth, height: parentHeight };
+      drawCanvas();
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    generateRandomGraph();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearRunningInterval();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirected]);
+
+  // Sync sourceNodeId to the first available node when the graph changes.
+  // This is a legitimate "derive state from props/state" pattern; React 19's
+  // strict rule flags it but the standard approach for syncing state
+  // initialization to a derived value is to commit it in an effect.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (nodesList.length > 0) {
+      if (!sourceNodeId || !nodesList.some((n) => n.id.toString() === sourceNodeId.toString())) {
+        setSourceNodeId(nodesList[0].id.toString());
+      }
+    } else {
+      setSourceNodeId("");
+    }
+  }, [nodesList, sourceNodeId]);
+
+  /* ── Keyboard shortcuts (Item 7) ── */
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === " ") {
+        e.preventDefault();
+        if (isRunning && currentStepIdx < totalStepsCount) togglePlayPause();
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (isRunning) stepForward();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (isRunning) stepBackward();
+      }
+      if (e.key === "r" || e.key === "R") {
+        resetVisualizer();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRunning, isPlaying, currentStepIdx, totalStepsCount]);
+
+  /* ── Non-passive wheel listener so preventDefault() actually blocks page scroll ── */
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const wheelHandler = (e) => handleWheel(e);
+    canvas.addEventListener("wheel", wheelHandler, { passive: false });
+    return () => canvas.removeEventListener("wheel", wheelHandler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync cursor mode to <body> via a controlled effect.
+  useEffect(() => {
+    document.body.style.cursor = cursorMode === "default" ? "" : cursorMode;
+  }, [cursorMode]);
+
+  /* ── Determine which legend items are active (Item 14) ── */
+  const activeLegendStates = (() => {
+    if (!isRunning) return new Set(["UNVISITED", "CURRENT", "VISITED", "IN_PATH"]);
+    const active = new Set();
+    for (const node of nodesList) {
+      active.add(node.state);
+    }
+    return active;
+  })();
   const progressPercent = totalStepsCount > 0 ? (currentStepIdx / totalStepsCount) * 100 : 0;
 
   return (
@@ -991,7 +1062,7 @@ export default function GraphVisualizer() {
                 type="range"
                 min="0"
                 max={totalStepsCount - 1}
-                value={playbackIndexRef.current >= 0 ? playbackIndexRef.current : 0}
+                value={Math.max(0, currentStepIdx - 1)}
                 onChange={(e) => seekToStep(parseInt(e.target.value, 10))}
                 className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
               />
@@ -1074,8 +1145,10 @@ export default function GraphVisualizer() {
 
       {/* Main Canvas & Separate Dedicated Workspace for Tables & Logs */}
       <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
+        {/* Canvas + Code Panel row */}
+        <div className="flex flex-col xl:flex-row gap-4">
         {/* Canvas panel */}
-        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[350px]">
+        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[320px] flex-1">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
             <div className="absolute top-0 left-0 right-0 h-1 bg-navy-600 z-20">
@@ -1094,7 +1167,7 @@ export default function GraphVisualizer() {
             onMouseLeave={() => {
               if (isPanningRef.current) {
                 isPanningRef.current = false;
-                document.body.style.cursor = "";
+                setCursorMode("default");
               }
               selectedNodeRef.current = null;
               cancelShiftDragging();
@@ -1153,7 +1226,7 @@ export default function GraphVisualizer() {
               <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.6s" }}>
                 <Move size={16} className="text-neon-cyan" />
                 <p className="text-sm font-semibold text-slate-300">
-                  Middle-click + drag to pan infinite canvas
+                  Middle-click + drag to pan · Scroll / pinch to zoom
                 </p>
               </div>
               <div className="h-[1px] bg-navy-600 my-1 w-40" />
@@ -1173,12 +1246,24 @@ export default function GraphVisualizer() {
           )}
         </div>
 
+          {/* Code Panel */}
+          <div className="w-full xl:w-[380px] xl:flex-shrink-0 h-[360px] xl:h-auto">
+            <CodePanel
+              algorithm={activeAlgorithm}
+              currentLine={currentCodeLine}
+              kind="graph"
+              title={ALGORITHM_TITLES[activeAlgorithm] || "Algorithm Code"}
+            />
+          </div>
+        </div>
+
         {/* Keyboard shortcuts hint (Item 7) */}
         <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0">
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
+          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">Scroll</kbd> Zoom</span>
         </div>
 
         {/* Separate Workspace for DSU or Distance Tables (Requested by user to prevent overlaps) */}

@@ -1,4 +1,3 @@
-import React from "react";
 import { ArrowRight, BookOpen, ExternalLink, Zap } from "lucide-react";
 
 export default function Footer({ setCurrentPage }) {

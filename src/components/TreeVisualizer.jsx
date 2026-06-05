@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Play,
   Pause,
@@ -27,7 +27,8 @@ import {
   buildTreePathSum,
   buildTreeBinaryLifting,
 } from "../algorithms/treeAlgorithms";
-import { useToast } from "./Toast";
+import CodePanel from "./CodePanel";
+import { useToast } from "../hooks/useToast";
 
 /* ── Speed label helper (Item 11) ── */
 const getSpeedLabel = (ms) => {
@@ -42,10 +43,10 @@ export default function TreeVisualizer() {
   const canvasRef = useRef(null);
   const bstRef = useRef(new BSTModel());
   const logContainerRef = useRef(null);
-  const cameraRef = useRef({ x: 0, y: 0 });
+  const cameraRef = useRef({ x: 0, y: 0, zoom: 1 });
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0 });
-  const canvasSizeRef = useRef({ width: 800, height: 400 });
+  const canvasSizeRef = useRef({ width: 800, height: 320 });
   const { showToast } = useToast();
 
   const [activeAlgorithm, setActiveAlgorithm] = useState("traversals");
@@ -76,16 +77,17 @@ export default function TreeVisualizer() {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [totalStepsCount, setTotalStepsCount] = useState(0);
   const [statusBannerText, setStatusBannerText] = useState("");
+  const [currentCodeLine, setCurrentCodeLine] = useState(null);
+  const [cursorMode, setCursorMode] = useState("default");
 
   const stepsTimelineRef = useRef([]);
   const playbackIndexRef = useRef(-1);
   const intervalIdRef = useRef(null);
-  const updateTriggerRef = useRef(null);
+  const selectedNodeRef = useRef(null);
 
   const syncTreeData = () => {
     const { nodes } = bstRef.current.getFlatNodesAndEdges();
     setNodesList(nodes);
-    updateTriggerRef.current = Math.random();
   };
 
   const addLog = (text, type = "step") => {
@@ -106,72 +108,16 @@ export default function TreeVisualizer() {
     };
   };
 
-  useEffect(() => {
-    bstRef.current.generatePrefilledTree();
-    syncTreeData();
-
-    return () => clearRunningInterval();
-  }, []);
-
-  useEffect(() => {
-    drawTree();
-  }, [updateTriggerRef.current, activeNodeId, highlightedNodeIds]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const parentWidth = rect.width || 800;
-      canvasSizeRef.current = { width: parentWidth, height: 400 };
-      drawTree();
+  const getCanvasMousePos = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const z = cameraRef.current.zoom || 1;
+    return {
+      x: (e.clientX - rect.left - cameraRef.current.x) / z,
+      y: (e.clientY - rect.top - cameraRef.current.y) / z,
     };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [executionLogs]);
-
-  // Set default LCA targets
-  useEffect(() => {
-    if (nodesList.length > 1) {
-      setLcaNodeAP(nodesList[0].value.toString());
-      setLcaNodeAQ(nodesList[nodesList.length - 1].value.toString());
-    } else {
-      setLcaNodeAP("");
-      setLcaNodeAQ("");
-    }
-  }, [nodesList]);
-
-  /* ── Keyboard shortcuts (Item 7) ── */
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
-
-      if (e.key === " ") {
-        e.preventDefault();
-        if (isRunning && currentStepIdx < totalStepsCount) togglePlayPause();
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        if (isRunning) stepForward();
-      }
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        if (isRunning) stepBackward();
-      }
-      if (e.key === "r" || e.key === "R") {
-        resetVisualStates();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isRunning, isPlaying, currentStepIdx, totalStepsCount]);
+  };
 
   const drawTree = () => {
     const canvas = canvasRef.current;
@@ -179,27 +125,29 @@ export default function TreeVisualizer() {
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const { width, height } = canvasSizeRef.current;
+    const z = cameraRef.current.zoom || 1;
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
 
+    // Clear in screen space (reset transform first)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
     ctx.save();
     ctx.scale(dpr, dpr);
-
-    // Apply camera transform
+    // Apply camera transform: translate then scale
     ctx.translate(cameraRef.current.x, cameraRef.current.y);
+    ctx.scale(z, z);
 
-    // Clear with camera offset
-    ctx.clearRect(-cameraRef.current.x - 1, -cameraRef.current.y - 1, width + 2, height + 2);
-
-    // Infinite Grid
+    // Infinite Grid (in world coordinates)
     const gridSize = 40;
-    const startX = Math.floor(-cameraRef.current.x / gridSize) * gridSize;
-    const startY = Math.floor(-cameraRef.current.y / gridSize) * gridSize;
-    const endX = -cameraRef.current.x + width + gridSize;
-    const endY = -cameraRef.current.y + height + gridSize;
+    const startX = Math.floor(-cameraRef.current.x / z / gridSize) * gridSize;
+    const startY = Math.floor(-cameraRef.current.y / z / gridSize) * gridSize;
+    const endX = (-cameraRef.current.x) / z + width / z + gridSize;
+    const endY = (-cameraRef.current.y) / z + height / z + gridSize;
 
     ctx.strokeStyle = "#303030";
     ctx.lineWidth = 0.4;
@@ -292,17 +240,40 @@ export default function TreeVisualizer() {
 
   const handleMouseDown = (e) => {
     if (isRunning) return;
+
     if (e.button === 1) {
       e.preventDefault();
       const screenPos = getScreenMousePos(e);
       isPanningRef.current = true;
       panStartRef.current = { x: screenPos.x, y: screenPos.y };
-      document.body.style.cursor = "grabbing";
+      setCursorMode("grabbing");
+      return;
+    }
+
+    const pos = getCanvasMousePos(e);
+    const clickedNode = bstRef.current.getNodeAt(pos.x, pos.y);
+
+    if (e.button === 0 && clickedNode) {
+      // Start dragging the node
+      selectedNodeRef.current = clickedNode;
+    }
+  };
+
+  const handleContextMenu = (e) => {
+    if (isRunning) return;
+    e.preventDefault();
+    const pos = getCanvasMousePos(e);
+    const clickedNode = bstRef.current.getNodeAt(pos.x, pos.y);
+    if (clickedNode) {
+      bstRef.current.removeNode(clickedNode);
+      syncTreeData();
+      addLog(`Deleted Node ${clickedNode.value}`, "system");
     }
   };
 
   const handleMouseMove = (e) => {
     if (isRunning) return;
+
     if (isPanningRef.current) {
       const screenPos = getScreenMousePos(e);
       const dx = screenPos.x - panStartRef.current.x;
@@ -311,27 +282,57 @@ export default function TreeVisualizer() {
       cameraRef.current.x += dx;
       cameraRef.current.y += dy;
       drawTree();
+      return;
+    }
+
+    if (selectedNodeRef.current) {
+      const pos = getCanvasMousePos(e);
+      bstRef.current.setNodePosition(selectedNodeRef.current, pos.x, pos.y);
+      drawTree();
     }
   };
 
   const handleMouseUp = () => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
-      document.body.style.cursor = "";
+      setCursorMode("default");
     }
+    selectedNodeRef.current = null;
   };
 
   const handleMouseLeave = () => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
-      document.body.style.cursor = "";
+      setCursorMode("default");
     }
+    selectedNodeRef.current = null;
+  };
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseScreenX = e.clientX - rect.left;
+    const mouseScreenY = e.clientY - rect.top;
+
+    const z = cameraRef.current.zoom || 1;
+    const intensity = e.ctrlKey ? 0.01 : 0.0015;
+    const delta = -e.deltaY * intensity;
+    const newZoom = Math.min(3, Math.max(0.25, z * Math.exp(delta)));
+
+    const worldX = (mouseScreenX - cameraRef.current.x) / z;
+    const worldY = (mouseScreenY - cameraRef.current.y) / z;
+    cameraRef.current.x = mouseScreenX - worldX * newZoom;
+    cameraRef.current.y = mouseScreenY - worldY * newZoom;
+    cameraRef.current.zoom = newZoom;
+    drawTree();
   };
 
   const handleBSTAction = (action) => {
     if (isRunning) return;
     const val = parseInt(inputValue, 10);
-    if (isNaN(val)) {
+    if (Number.isNaN(val)) {
       showToast("Please enter a valid numeric value!", "warning");
       return;
     }
@@ -427,6 +428,7 @@ export default function TreeVisualizer() {
       if (idx >= steps.length - 1) {
         clearRunningInterval();
         setIsPlaying(false);
+        setIsRunning(false);
         return;
       }
       playbackIndexRef.current = idx + 1;
@@ -446,6 +448,7 @@ export default function TreeVisualizer() {
     const step = steps[idx];
     setActiveNodeId(step.activeId);
     setHighlightedNodeIds(step.highlightedIds || new Set());
+    setCurrentCodeLine(step.codeLine ?? null);
     addLog(step.description, "step");
     setStatusBannerText(step.description);
 
@@ -515,6 +518,7 @@ export default function TreeVisualizer() {
     setLiveQueueList([]);
     setHeightsList(new Map());
     setLiftingDataList([]);
+    setCurrentCodeLine(null);
     setIsRunning(false);
     setIsPlaying(false);
     clearLog();
@@ -532,6 +536,97 @@ export default function TreeVisualizer() {
     link.click();
     showToast("Screenshot saved!", "success");
   };
+
+  /* ── Effects (placed after all function declarations) ── */
+
+  useEffect(() => {
+    bstRef.current.generatePrefilledTree();
+    syncTreeData();
+
+    return () => clearRunningInterval();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    drawTree();
+  }, [nodesList, activeNodeId, highlightedNodeIds]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const parentWidth = rect.width || 800;
+      canvasSizeRef.current = { width: parentWidth, height: 320 };
+      drawTree();
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [executionLogs]);
+
+  // Set default LCA targets when tree shape changes.
+  // This is a legitimate "derive state from props/state" pattern; React 19's
+  // compiler rule flags it but the standard approach for syncing a state
+  // initialization to a derived value is to commit it in an effect.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (nodesList.length > 1) {
+      setLcaNodeAP(nodesList[0].value.toString());
+      setLcaNodeAQ(nodesList[nodesList.length - 1].value.toString());
+    } else {
+      setLcaNodeAP("");
+      setLcaNodeAQ("");
+    }
+  }, [nodesList]);
+
+  /* ── Keyboard shortcuts (Item 7) ── */
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === " ") {
+        e.preventDefault();
+        if (isRunning && currentStepIdx < totalStepsCount) togglePlayPause();
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        if (isRunning) stepForward();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (isRunning) stepBackward();
+      }
+      if (e.key === "r" || e.key === "R") {
+        resetVisualStates();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRunning, isPlaying, currentStepIdx, totalStepsCount]);
+
+  /* ── Non-passive wheel listener so preventDefault() actually blocks page scroll ── */
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const wheelHandler = (e) => handleWheel(e);
+    canvas.addEventListener("wheel", wheelHandler, { passive: false });
+    return () => canvas.removeEventListener("wheel", wheelHandler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync cursor mode to <body> via a controlled effect.
+  useEffect(() => {
+    document.body.style.cursor = cursorMode === "default" ? "" : cursorMode;
+  }, [cursorMode]);
 
   const progressPercent = totalStepsCount > 0 ? (currentStepIdx / totalStepsCount) * 100 : 0;
 
@@ -779,7 +874,7 @@ export default function TreeVisualizer() {
                 type="range"
                 min="0"
                 max={totalStepsCount - 1}
-                value={playbackIndexRef.current >= 0 ? playbackIndexRef.current : 0}
+                value={Math.max(0, currentStepIdx - 1)}
                 onChange={(e) => seekToStep(parseInt(e.target.value, 10))}
                 className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
               />
@@ -822,8 +917,10 @@ export default function TreeVisualizer() {
 
       {/* Main Canvas & Separate Workspace for Tables/Results/Logs */}
       <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
-        {/* Canvas panel */}
-        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center p-4 min-h-[350px]">
+        {/* Canvas + Code Panel row */}
+        <div className="flex flex-col xl:flex-row gap-4">
+          {/* Canvas panel */}
+          <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center p-4 min-h-[300px] flex-1">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
             <div className="absolute top-0 left-0 right-0 h-1 bg-navy-600 z-20">
@@ -840,8 +937,8 @@ export default function TreeVisualizer() {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
+            onContextMenu={handleContextMenu}
             className="block max-w-full"
-            onContextMenu={(e) => e.preventDefault()}
           />
 
           {/* Canvas toolbar */}
@@ -875,7 +972,7 @@ export default function TreeVisualizer() {
 
           {/* Empty state + Help overlay (Items 5 + 10) */}
           {(nodesList.length === 0 || showHelpOverlay) && (
-            <div className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10">
+            <div className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10 pointer-events-none">
               <div className="flex items-center gap-3 animate-gentle-pulse">
                 <TreePine size={18} className="text-emerald-400" />
                 <p className="text-sm font-semibold text-slate-300">
@@ -885,12 +982,43 @@ export default function TreeVisualizer() {
               <div className="flex flex-col gap-2 text-xs text-slate-400 mt-2">
                 <p className="animate-gentle-pulse">• <strong className="text-emerald-400">Insert</strong> — Enter a number and click Insert</p>
                 <p className="animate-gentle-pulse" style={{ animationDelay: "0.15s" }}>• <strong className="text-neon-cyan">Search</strong> — Enter a value to find in the BST</p>
-                <p className="animate-gentle-pulse" style={{ animationDelay: "0.3s" }}>• <strong className="text-rose-400">Delete</strong> — Remove a node by value</p>
-                <p className="animate-gentle-pulse" style={{ animationDelay: "0.45s" }}>• <strong className="text-slate-300">Random / Prefilled</strong> — Quick-generate a tree</p>
-                <p className="animate-gentle-pulse" style={{ animationDelay: "0.6s" }}>• <strong className="text-slate-400">Middle-click</strong> — Pan the infinite canvas</p>
+                <p className="animate-gentle-pulse" style={{ animationDelay: "0.3s" }}>• <strong className="text-rose-400">Delete</strong> — Remove a node by value, or right-click a node</p>
+                <p className="animate-gentle-pulse" style={{ animationDelay: "0.45s" }}>• <strong className="text-slate-300">Drag a node</strong> — Reposition it on the canvas</p>
+                <p className="animate-gentle-pulse" style={{ animationDelay: "0.6s" }}>• <strong className="text-slate-400">Middle-click / Scroll</strong> — Pan · zoom the canvas</p>
               </div>
             </div>
           )}
+        </div>
+
+          {/* Code Panel */}
+          <div className="w-full xl:w-[380px] xl:flex-shrink-0 h-[300px] xl:h-auto">
+            <CodePanel
+              algorithm={activeAlgorithm}
+              traversalType={traversalType}
+              currentLine={currentCodeLine}
+              title={
+                activeAlgorithm === "search"
+                  ? "BST Search"
+                  : activeAlgorithm === "insert"
+                    ? "BST Insert"
+                    : activeAlgorithm === "delete"
+                      ? "BST Delete"
+                      : activeAlgorithm === "traversals"
+                        ? `${traversalType.charAt(0).toUpperCase() + traversalType.slice(1)} Traversal`
+                        : activeAlgorithm === "bfs"
+                          ? "BFS Traversal"
+                          : activeAlgorithm === "height"
+                            ? "Height & Diameter"
+                            : activeAlgorithm === "lca"
+                              ? "Lowest Common Ancestor"
+                              : activeAlgorithm === "pathsum"
+                                ? "Path Sum"
+                                : activeAlgorithm === "lifting"
+                                  ? "Binary Lifting"
+                                  : "Algorithm Code"
+              }
+            />
+          </div>
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
@@ -899,6 +1027,7 @@ export default function TreeVisualizer() {
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
+          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">Scroll</kbd> Zoom</span>
         </div>
 
         {/* Dedicated Space for Tables and Results */}

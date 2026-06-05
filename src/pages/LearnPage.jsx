@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { 
   BookOpen, 
   Search, 
@@ -34,11 +34,12 @@ export default function LearnPage() {
   const selectedAlgo = filteredAlgos.find((a) => a.id === selectedAlgoId) || filteredAlgos[0];
 
   // Reset selected algorithm if category or search causes the current one to disappear
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (filteredAlgos.length > 0 && !filteredAlgos.some((a) => a.id === selectedAlgoId)) {
       setSelectedAlgoId(filteredAlgos[0].id);
     }
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, filteredAlgos, selectedAlgoId]);
 
   const handleCopyCode = (text) => {
     navigator.clipboard.writeText(text);

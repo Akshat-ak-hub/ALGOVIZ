@@ -16,6 +16,12 @@ export class TreeNode {
     this.y = 0;
     this.state = NodeState.UNVISITED;
   }
+
+  contains(px, py) {
+    const dx = px - this.x;
+    const dy = py - this.y;
+    return dx * dx + dy * dy <= 484; // Radius 22
+  }
 }
 
 export class BSTModel {
@@ -40,6 +46,7 @@ export class BSTModel {
         activeId: newNode.id,
         nodes: this.cloneTree(),
         highlightedIds: new Set([newNode.id]),
+        codeLine: 2,
       });
       return { root: this.root, steps };
     }
@@ -50,6 +57,7 @@ export class BSTModel {
       activeId: curr.id,
       nodes: this.cloneTree(),
       highlightedIds: new Set([curr.id]),
+      codeLine: 3,
     });
 
     while (curr) {
@@ -59,6 +67,7 @@ export class BSTModel {
           activeId: curr.id,
           nodes: this.cloneTree(),
           highlightedIds: new Set([curr.id]),
+          codeLine: 4,
         });
         if (!curr.left) {
           curr.left = newNode;
@@ -68,6 +77,7 @@ export class BSTModel {
             activeId: newNode.id,
             nodes: this.cloneTree(),
             highlightedIds: new Set([newNode.id, curr.id]),
+            codeLine: 4,
           });
           break;
         }
@@ -78,6 +88,7 @@ export class BSTModel {
           activeId: curr.id,
           nodes: this.cloneTree(),
           highlightedIds: new Set([curr.id]),
+          codeLine: 5,
         });
         if (!curr.right) {
           curr.right = newNode;
@@ -87,6 +98,7 @@ export class BSTModel {
             activeId: newNode.id,
             nodes: this.cloneTree(),
             highlightedIds: new Set([newNode.id, curr.id]),
+            codeLine: 6,
           });
           break;
         }
@@ -105,6 +117,7 @@ export class BSTModel {
         activeId: null,
         nodes: this.cloneTree(),
         highlightedIds: new Set(),
+        codeLine: 2,
       });
       return steps;
     }
@@ -115,6 +128,7 @@ export class BSTModel {
       activeId: curr.id,
       nodes: this.cloneTree(),
       highlightedIds: new Set([curr.id]),
+      codeLine: 4,
     });
 
     while (curr) {
@@ -125,6 +139,7 @@ export class BSTModel {
           nodes: this.cloneTree(),
           highlightedIds: new Set([curr.id]),
           found: true,
+          codeLine: 6,
         });
         return steps;
       }
@@ -137,6 +152,7 @@ export class BSTModel {
           activeId: curr.id,
           nodes: this.cloneTree(),
           highlightedIds: new Set([curr.id]),
+          codeLine: 8,
         });
       } else {
         if (!curr.right) break;
@@ -146,6 +162,7 @@ export class BSTModel {
           activeId: curr.id,
           nodes: this.cloneTree(),
           highlightedIds: new Set([curr.id]),
+          codeLine: 10,
         });
       }
     }
@@ -156,6 +173,7 @@ export class BSTModel {
       nodes: this.cloneTree(),
       highlightedIds: new Set(),
       found: false,
+      codeLine: 11,
     });
     return steps;
   }
@@ -325,6 +343,110 @@ export class BSTModel {
       usedValues.add(val);
       this.insert(val);
     }
-    this.positionTree(this.root, 400, 60, 200);
+    this.autoLayout();
+  }
+
+  /* ── Canvas-positioned API (matches GraphModel UX) ── */
+
+  autoLayout() {
+    // Lay out nodes in a tidy BFS pattern centered at (400, 60) if any node
+    // lacks an explicit position. Falls back to full auto-layout if root is
+    // unpositioned.
+    if (!this.root) return;
+    if (this.root.x === 0 && this.root.y === 0) {
+      this.positionTree(this.root, 400, 60, 200);
+    }
+  }
+
+  addNodeAt(value, x, y) {
+    const newNode = new TreeNode(this.nodeCounter++, value);
+    newNode.x = x;
+    newNode.y = y;
+
+    if (!this.root) {
+      this.root = newNode;
+      return newNode;
+    }
+
+    let curr = this.root;
+    while (true) {
+      if (value < curr.value) {
+        if (!curr.left) {
+          curr.left = newNode;
+          newNode.parent = curr;
+          return newNode;
+        }
+        curr = curr.left;
+      } else {
+        if (!curr.right) {
+          curr.right = newNode;
+          newNode.parent = curr;
+          return newNode;
+        }
+        curr = curr.right;
+      }
+    }
+  }
+
+  getNodeAt(x, y) {
+    // Depth-first search; nodes returned as plain references
+    const stack = this.root ? [this.root] : [];
+    while (stack.length) {
+      const node = stack.pop();
+      if (node.contains(x, y)) return node;
+      if (node.right) stack.push(node.right);
+      if (node.left) stack.push(node.left);
+    }
+    return null;
+  }
+
+  setNodePosition(node, x, y) {
+    node.x = x;
+    node.y = y;
+  }
+
+  removeNode(node) {
+    if (!node) return;
+    // Standard BST deletion preserving ordering.
+    // 1) If leaf or one child: splice the node out.
+    // 2) If two children: replace value with in-order successor,
+    //    then delete the successor from the right subtree.
+    if (!node.left || !node.right) {
+      const replacement = node.left || node.right;
+      if (node.parent) {
+        if (node.parent.left === node) node.parent.left = replacement;
+        else node.parent.right = replacement;
+      } else {
+        this.root = replacement;
+      }
+      if (replacement) replacement.parent = node.parent;
+      return;
+    }
+
+    // Two children: find in-order successor (smallest in right subtree)
+    let successor = node.right;
+    while (successor.left) successor = successor.left;
+
+    // Inherit successor's value (preserve BST property of the *structure*)
+    node.value = successor.value;
+    node.label = successor.label;
+
+    // Splice successor out of the right subtree
+    if (successor.parent.left === successor) {
+      successor.parent.left = successor.right;
+    } else {
+      successor.parent.right = successor.right;
+    }
+    if (successor.right) successor.right.parent = successor.parent;
+  }
+
+  clearAllStates() {
+    const walk = (n) => {
+      if (!n) return;
+      n.state = NodeState.UNVISITED;
+      walk(n.left);
+      walk(n.right);
+    };
+    walk(this.root);
   }
 }

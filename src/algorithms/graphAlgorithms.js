@@ -25,6 +25,7 @@ export function runGraphDFS(nodes, edges, isDirected, startNode) {
     visited: new Set(visited),
     frontier: [startNode.id],
     traversedEdges: new Set(),
+    codeLine: 4,
   });
 
   stack.push(startNode);
@@ -41,6 +42,7 @@ export function runGraphDFS(nodes, edges, isDirected, startNode) {
       visited: new Set(visited),
       frontier: stack.map((n) => n.id),
       traversedEdges: new Set(traversedEdges),
+      codeLine: 8,
     });
 
     // Add neighbors in reverse order to explore left neighbors first
@@ -57,6 +59,7 @@ export function runGraphDFS(nodes, edges, isDirected, startNode) {
           visited: new Set(visited),
           frontier: stack.map((n) => n.id),
           traversedEdges: new Set(traversedEdges),
+          codeLine: 14,
         });
       }
     }
@@ -68,6 +71,7 @@ export function runGraphDFS(nodes, edges, isDirected, startNode) {
     visited: new Set(visited),
     frontier: [],
     traversedEdges: new Set(traversedEdges),
+    codeLine: 16,
   });
 
   return steps;
@@ -97,6 +101,7 @@ export function runGraphBFS(nodes, edges, isDirected, startNode) {
     visited: new Set(visited),
     frontier: queue.map((n) => n.id),
     traversedEdges: new Set(),
+    codeLine: 5,
   });
 
   while (queue.length > 0) {
@@ -108,6 +113,7 @@ export function runGraphBFS(nodes, edges, isDirected, startNode) {
       visited: new Set(visited),
       frontier: queue.map((n) => n.id),
       traversedEdges: new Set(traversedEdges),
+      codeLine: 8,
     });
 
     const neighbors = adj[curr.id];
@@ -124,6 +130,7 @@ export function runGraphBFS(nodes, edges, isDirected, startNode) {
           visited: new Set(visited),
           frontier: queue.map((n) => n.id),
           traversedEdges: new Set(traversedEdges),
+          codeLine: 14,
         });
       }
     }
@@ -135,12 +142,13 @@ export function runGraphBFS(nodes, edges, isDirected, startNode) {
     visited: new Set(visited),
     frontier: [],
     traversedEdges: new Set(traversedEdges),
+    codeLine: 17,
   });
 
   return steps;
 }
 
-export function runGraphTopo(nodes, edges, startNode) {
+export function runGraphTopo(nodes, edges) {
   const steps = [];
   const inDegree = new Map();
   const adj = {};
@@ -167,6 +175,7 @@ export function runGraphTopo(nodes, edges, startNode) {
     frontier: [],
     inDegree: new Map(inDegree),
     order: [],
+    codeLine: 3,
   });
 
   for (const n of nodes) {
@@ -182,6 +191,7 @@ export function runGraphTopo(nodes, edges, startNode) {
     frontier: queue.map((n) => n.id),
     inDegree: new Map(inDegree),
     order: [],
+    codeLine: 8,
   });
 
   while (queue.length > 0) {
@@ -196,6 +206,7 @@ export function runGraphTopo(nodes, edges, startNode) {
       frontier: queue.map((n) => n.id),
       inDegree: new Map(inDegree),
       order: [...order],
+      codeLine: 11,
     });
 
     for (const item of adj[curr.id]) {
@@ -212,6 +223,7 @@ export function runGraphTopo(nodes, edges, startNode) {
         frontier: queue.map((n) => n.id),
         inDegree: new Map(inDegree),
         order: [...order],
+        codeLine: 12,
       });
 
       if (newIn === 0) {
@@ -223,6 +235,7 @@ export function runGraphTopo(nodes, edges, startNode) {
           frontier: queue.map((n) => n.id),
           inDegree: new Map(inDegree),
           order: [...order],
+          codeLine: 14,
         });
       }
     }
@@ -240,6 +253,7 @@ export function runGraphTopo(nodes, edges, startNode) {
     frontier: [],
     order: [...order],
     cycleDetected: hasCycle,
+    codeLine: 15,
   });
 
   return steps;
@@ -277,6 +291,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
       visited: new Set(visited),
       frontier: isDirected ? [...recStack] : [],
       cycleEdges: new Set(cycleEdges),
+      codeLine: 5,
     });
 
     for (const item of adj[node.id]) {
@@ -293,6 +308,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
             frontier: [...recStack],
             cycleEdges: new Set(cycleEdges),
             cycleFound: true,
+            codeLine: 9,
           });
           return;
         }
@@ -315,6 +331,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
             frontier: [],
             cycleEdges: new Set(cycleEdges),
             cycleFound: true,
+            codeLine: 8,
           });
           return;
         }
@@ -330,6 +347,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
     visited: new Set(),
     frontier: [],
     cycleEdges: new Set(),
+    codeLine: 4,
   });
 
   for (const n of nodes) {
@@ -346,6 +364,7 @@ export function runGraphCycleDetection(nodes, edges, isDirected) {
       frontier: [],
       cycleEdges: new Set(),
       cycleFound: false,
+      codeLine: 15,
     });
   }
 
@@ -381,6 +400,7 @@ export function runGraphDSU(nodes, edges) {
     visited: new Set(),
     frontier: [],
     dsuTable: getDSUTables(),
+    codeLine: 5,
   });
 
   const find = (i) => {
@@ -412,6 +432,7 @@ export function runGraphDSU(nodes, edges) {
       visited: new Set(),
       frontier: [],
       dsuTable: getDSUTables(),
+      codeLine: 8,
     });
 
     if (rootX !== rootY) {
@@ -432,6 +453,7 @@ export function runGraphDSU(nodes, edges) {
         visited: new Set(),
         frontier: [],
         dsuTable: getDSUTables(),
+        codeLine: 12,
       });
     } else {
       steps.push({
@@ -440,6 +462,7 @@ export function runGraphDSU(nodes, edges) {
         visited: new Set(),
         frontier: [],
         dsuTable: getDSUTables(),
+        codeLine: 10,
       });
     }
   };
@@ -455,6 +478,7 @@ export function runGraphDSU(nodes, edges) {
     visited: new Set(),
     frontier: [],
     dsuTable: getDSUTables(),
+    codeLine: 14,
   });
 
   return steps;
@@ -501,6 +525,7 @@ export function runGraphMSTKruskal(nodes, edges) {
     visited: new Set(),
     frontier: [],
     traversedEdges: new Set(),
+    codeLine: 3,
   });
 
   while (mstEdges.size < nodes.length - 1 && edgeIndex < sortedEdges.length) {
@@ -519,6 +544,7 @@ export function runGraphMSTKruskal(nodes, edges) {
       visited: new Set([u.id, v.id]),
       frontier: [],
       traversedEdges: new Set(mstEdges),
+      codeLine: 8,
     });
 
     if (rootU !== rootV) {
@@ -532,6 +558,7 @@ export function runGraphMSTKruskal(nodes, edges) {
         visited: new Set(),
         frontier: [],
         traversedEdges: new Set(mstEdges),
+        codeLine: 11,
       });
     } else {
       edge.state = EdgeState.NORMAL; // Reset, cycle formed
@@ -541,6 +568,7 @@ export function runGraphMSTKruskal(nodes, edges) {
         visited: new Set(),
         frontier: [],
         traversedEdges: new Set(mstEdges),
+        codeLine: 9,
       });
     }
   }
@@ -551,6 +579,7 @@ export function runGraphMSTKruskal(nodes, edges) {
     visited: new Set(),
     frontier: [],
     traversedEdges: new Set(mstEdges),
+    codeLine: 14,
   });
 
   return steps;
@@ -579,6 +608,7 @@ export function runGraphMSTPrim(nodes, edges) {
     visited: new Set(visited),
     frontier: [],
     traversedEdges: new Set(),
+    codeLine: 4,
   });
 
   while (visited.size < nodes.length) {
@@ -608,6 +638,7 @@ export function runGraphMSTPrim(nodes, edges) {
       visited: new Set(visited),
       frontier: [],
       traversedEdges: new Set(mstEdges),
+      codeLine: 9,
     });
 
     visited.add(nextNode.id);
@@ -620,6 +651,7 @@ export function runGraphMSTPrim(nodes, edges) {
       visited: new Set(visited),
       frontier: [],
       traversedEdges: new Set(mstEdges),
+      codeLine: 12,
     });
   }
 
@@ -629,6 +661,7 @@ export function runGraphMSTPrim(nodes, edges) {
     visited: new Set(visited),
     frontier: [],
     traversedEdges: new Set(mstEdges),
+    codeLine: 16,
   });
 
   return steps;
@@ -651,6 +684,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
     visited: new Set(),
     distances: new Map(distances),
     predecessors: new Map(predecessors),
+    codeLine: 4,
   });
 
   // Run V-1 relaxation rounds
@@ -663,6 +697,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
       visited: new Set(),
       distances: new Map(distances),
       predecessors: new Map(predecessors),
+      codeLine: 6,
     });
 
     for (const edge of edges) {
@@ -687,6 +722,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
           visited: new Set([u.id, v.id]),
           distances: new Map(distances),
           predecessors: new Map(predecessors),
+          codeLine: 10,
         });
         edge.state = EdgeState.NORMAL;
       }
@@ -699,6 +735,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
         visited: new Set(),
         distances: new Map(distances),
         predecessors: new Map(predecessors),
+        codeLine: 12,
       });
       break;
     }
@@ -712,6 +749,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
     visited: new Set(),
     distances: new Map(distances),
     predecessors: new Map(predecessors),
+    codeLine: 6,
   });
 
   for (const edge of edges) {
@@ -733,6 +771,7 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
         distances: new Map(distances),
         predecessors: new Map(predecessors),
         cycleDetected: true,
+        codeLine: 9,
       });
       break;
     }
@@ -745,13 +784,14 @@ export function runGraphBellmanFord(nodes, edges, startNode) {
       visited: new Set(),
       distances: new Map(distances),
       predecessors: new Map(predecessors),
+      codeLine: 12,
     });
   }
 
   return steps;
 }
 
-export function runGraphSCCKosaraju(nodes, edges, startNode) {
+export function runGraphSCCKosaraju(nodes, edges) {
   const steps = [];
   const visited = new Set();
   const finishStack = [];
@@ -779,6 +819,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
       currentNode: node,
       visited: new Set(visited),
       frontier: [...finishStack],
+      codeLine: 3,
     });
 
     for (const item of adj[node.id]) {
@@ -795,6 +836,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
       currentNode: node,
       visited: new Set(visited),
       frontier: [...finishStack],
+      codeLine: 6,
     });
   };
 
@@ -803,6 +845,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
     currentNode: null,
     visited: new Set(),
     frontier: [],
+    codeLine: 16,
   });
 
   for (const n of nodes) {
@@ -818,6 +861,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
     visited: new Set(),
     frontier: [...finishStack],
     isTransposed: true,
+    codeLine: 17,
   });
 
   // PASS 2: DFS on G^T in finish order
@@ -838,6 +882,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
       currentComponent: new Set(currentComponent),
       componentsList: [...components],
       isTransposed: true,
+      codeLine: 10,
     });
 
     for (const item of transAdj[node.id]) {
@@ -863,6 +908,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
         visited: new Set(visited),
         frontier: [...finishStack],
         isTransposed: true,
+        codeLine: 11,
       });
 
       dfs2(node, sccColor);
@@ -874,6 +920,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
         visited: new Set(visited),
         frontier: [...finishStack],
         isTransposed: true,
+        codeLine: 11,
       });
     }
   }
@@ -889,6 +936,7 @@ export function runGraphSCCKosaraju(nodes, edges, startNode) {
     frontier: [],
     componentsList: [...components],
     isTransposed: true,
+    codeLine: 17,
   });
 
   return steps;
@@ -924,6 +972,7 @@ export function runGraphTarjanBridges(nodes, edges) {
       lowMap: new Map(low),
       bridges: new Set(bridges),
       articulations: new Set(articulations),
+      codeLine: 4,
     });
 
     let children = 0;
@@ -949,6 +998,7 @@ export function runGraphTarjanBridges(nodes, edges) {
           lowMap: new Map(low),
           bridges: new Set(bridges),
           articulations: new Set(articulations),
+          codeLine: 8,
         });
       } else {
         children++;
@@ -968,6 +1018,7 @@ export function runGraphTarjanBridges(nodes, edges) {
           lowMap: new Map(low),
           bridges: new Set(bridges),
           articulations: new Set(articulations),
+          codeLine: 11,
         });
 
         // Articulation point criteria
@@ -982,6 +1033,7 @@ export function runGraphTarjanBridges(nodes, edges) {
             lowMap: new Map(low),
             bridges: new Set(bridges),
             articulations: new Set(articulations),
+            codeLine: 12,
           });
         }
 
@@ -997,6 +1049,7 @@ export function runGraphTarjanBridges(nodes, edges) {
             lowMap: new Map(low),
             bridges: new Set(bridges),
             articulations: new Set(articulations),
+            codeLine: 13,
           });
         }
       }
@@ -1013,6 +1066,7 @@ export function runGraphTarjanBridges(nodes, edges) {
         lowMap: new Map(low),
         bridges: new Set(bridges),
         articulations: new Set(articulations),
+        codeLine: 12,
       });
     }
   };
@@ -1025,6 +1079,7 @@ export function runGraphTarjanBridges(nodes, edges) {
     lowMap: new Map(),
     bridges: new Set(),
     articulations: new Set(),
+    codeLine: 2,
   });
 
   for (const n of nodes) {
@@ -1042,6 +1097,7 @@ export function runGraphTarjanBridges(nodes, edges) {
     lowMap: new Map(low),
     bridges: new Set(bridges),
     articulations: new Set(articulations),
+    codeLine: 16,
   });
 
   return steps;
@@ -1079,6 +1135,7 @@ export function runGraphDijkstra(nodes, edges, isDirected, startNode, endNode) {
     distances: new Map(distances),
     predecessors: new Map(predecessors),
     traversedEdges: new Set(),
+    codeLine: 4,
   });
 
   while (pq.length > 0) {
@@ -1096,6 +1153,7 @@ export function runGraphDijkstra(nodes, edges, isDirected, startNode, endNode) {
       distances: new Map(distances),
       predecessors: new Map(predecessors),
       traversedEdges: new Set(traversedEdges),
+      codeLine: 8,
     });
 
     // Early exit if we reached destination
@@ -1107,6 +1165,7 @@ export function runGraphDijkstra(nodes, edges, isDirected, startNode, endNode) {
         distances: new Map(distances),
         predecessors: new Map(predecessors),
         traversedEdges: new Set(traversedEdges),
+        codeLine: 12,
       });
       break;
     }
@@ -1132,6 +1191,7 @@ export function runGraphDijkstra(nodes, edges, isDirected, startNode, endNode) {
           distances: new Map(distances),
           predecessors: new Map(predecessors),
           traversedEdges: new Set(traversedEdges),
+          codeLine: 13,
         });
       }
     }
@@ -1144,6 +1204,7 @@ export function runGraphDijkstra(nodes, edges, isDirected, startNode, endNode) {
     distances: new Map(distances),
     predecessors: new Map(predecessors),
     traversedEdges: new Set(traversedEdges),
+    codeLine: 19,
   });
 
   return steps;

@@ -1,4 +1,3 @@
-import React from "react";
 import { Home, GitBranch, Network, BookOpen } from "lucide-react";
 
 export default function NavBarHeader({ currentPage, setCurrentPage }) {

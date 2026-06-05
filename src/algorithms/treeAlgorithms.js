@@ -11,6 +11,12 @@ export function buildTreeTraversals(root, type) {
   const flat = new BSTModel();
   flat.root = root;
 
+  // Line numbers per traversal type (matching treeAlgorithmCode.js)
+  const visitLine = { preorder: 3, inorder: 4, postorder: 5 };
+  const recurseLeftLine = { preorder: 4, inorder: 3, postorder: 3 };
+  const recurseRightLine = { preorder: 5, inorder: 5, postorder: 4 };
+  const backtrackLine = visitLine[type];
+
   const traverse = (node) => {
     if (!node) return;
 
@@ -22,6 +28,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: visitLine.preorder,
       });
     }
 
@@ -31,6 +38,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.left.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: recurseLeftLine[type],
       });
       traverse(node.left);
       steps.push({
@@ -38,6 +46,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: backtrackLine,
       });
     }
 
@@ -49,6 +58,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: visitLine.inorder,
       });
     }
 
@@ -58,6 +68,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.right.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: recurseRightLine[type],
       });
       traverse(node.right);
       steps.push({
@@ -65,6 +76,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: backtrackLine,
       });
     }
 
@@ -76,6 +88,7 @@ export function buildTreeTraversals(root, type) {
         activeId: node.id,
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
+        codeLine: visitLine.postorder,
       });
     }
   };
@@ -85,6 +98,7 @@ export function buildTreeTraversals(root, type) {
     activeId: root.id,
     visitedValues: [],
     highlightedIds: new Set(),
+    codeLine: 1,
   });
 
   traverse(root);
@@ -94,6 +108,7 @@ export function buildTreeTraversals(root, type) {
     activeId: null,
     visitedValues: [...visitedValues],
     highlightedIds: new Set(traversedIds),
+    codeLine: 6,
   });
 
   return steps;
@@ -113,10 +128,10 @@ export function buildTreeBFS(root) {
     visitedValues: [],
     highlightedIds: new Set(),
     queue: [root.value],
+    codeLine: 4,
   });
 
   while (queue.length > 0) {
-    const qStr = queue.map((item) => item.node.value).join(", ");
     const { node, parentVal } = queue.shift();
 
     visitedValues.push(node.value);
@@ -132,6 +147,7 @@ export function buildTreeBFS(root) {
       visitedValues: [...visitedValues],
       highlightedIds: new Set(traversedIds),
       queue: queue.map((item) => item.node.value),
+      codeLine: 8,
     });
 
     if (node.left) {
@@ -142,6 +158,7 @@ export function buildTreeBFS(root) {
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
         queue: queue.map((item) => item.node.value),
+        codeLine: 9,
       });
     }
 
@@ -153,6 +170,7 @@ export function buildTreeBFS(root) {
         visitedValues: [...visitedValues],
         highlightedIds: new Set(traversedIds),
         queue: queue.map((item) => item.node.value),
+        codeLine: 10,
       });
     }
   }
@@ -163,6 +181,7 @@ export function buildTreeBFS(root) {
     visitedValues: [...visitedValues],
     highlightedIds: new Set(traversedIds),
     queue: [],
+    codeLine: 12,
   });
 
   return steps;
@@ -182,6 +201,7 @@ export function buildTreeHeightDiameter(root) {
       heights: new Map(heights),
       maxDiameter,
       highlightedIds: new Set([node.id]),
+      codeLine: 3,
     });
 
     const leftH = calculate(node.left);
@@ -201,6 +221,7 @@ export function buildTreeHeightDiameter(root) {
       heights: new Map(heights),
       maxDiameter,
       highlightedIds: new Set([node.id]),
+      codeLine: 5,
     });
 
     return nodeH;
@@ -212,6 +233,7 @@ export function buildTreeHeightDiameter(root) {
     heights: new Map(),
     maxDiameter: 0,
     highlightedIds: new Set(),
+    codeLine: 1,
   });
 
   calculate(root);
@@ -222,6 +244,7 @@ export function buildTreeHeightDiameter(root) {
     heights: new Map(heights),
     maxDiameter,
     highlightedIds: new Set(),
+    codeLine: 7,
   });
 
   return steps;
@@ -246,6 +269,7 @@ export function buildTreeLCA(root, pVal, qVal) {
       description: "One or both LCA target nodes not found in tree.",
       activeId: null,
       highlightedIds: new Set(),
+      codeLine: 1,
     });
     return steps;
   }
@@ -277,6 +301,7 @@ export function buildTreeLCA(root, pVal, qVal) {
     description: `Tracing path for LCA targets. Path to Node ${pVal}: [${pathPStr}]. Path to Node ${qVal}: [${pathQStr}].`,
     activeId: root.id,
     highlightedIds: new Set([pNode.id, qNode.id]),
+    codeLine: 4,
   });
 
   let lcaNode = null;
@@ -292,12 +317,14 @@ export function buildTreeLCA(root, pVal, qVal) {
         description: `Check path index ${i}: Common node found: Node ${lcaNode.value}.`,
         activeId: lcaNode.id,
         highlightedIds: new Set([lcaNode.id, pNode.id, qNode.id]),
+        codeLine: 7,
       });
     } else {
       steps.push({
         description: `Check path index ${i}: Paths diverge (${nP.value} ≠ ${nQ.value}). Previous common node is the LCA.`,
         activeId: lcaNode.id,
         highlightedIds: new Set([lcaNode.id, pNode.id, qNode.id]),
+        codeLine: 8,
       });
       break;
     }
@@ -308,6 +335,7 @@ export function buildTreeLCA(root, pVal, qVal) {
     activeId: lcaNode.id,
     highlightedIds: new Set([lcaNode.id]),
     lcaFinished: true,
+    codeLine: 10,
   });
 
   return steps;
@@ -329,6 +357,7 @@ export function buildTreePathSum(root, targetSum) {
       description: `Visit Node ${node.value}. Current path: [${pathStr}] = ${newSum}. (Target = ${targetSum})`,
       activeId: node.id,
       highlightedIds: new Set(currentPath.map((n) => n.id)),
+      codeLine: 1,
     });
 
     const isLeaf = !node.left && !node.right;
@@ -340,12 +369,14 @@ export function buildTreePathSum(root, targetSum) {
           activeId: node.id,
           highlightedIds: new Set(currentPath.map((n) => n.id)),
           match: true,
+          codeLine: 5,
         });
       } else {
         steps.push({
           description: `Leaf Node ${node.value} reached. Sum (${newSum}) != Target (${targetSum}).`,
           activeId: node.id,
           highlightedIds: new Set(currentPath.map((n) => n.id)),
+          codeLine: 3,
         });
       }
     } else {
@@ -355,6 +386,7 @@ export function buildTreePathSum(root, targetSum) {
           description: `Backtrack to Node ${node.value} from left child.`,
           activeId: node.id,
           highlightedIds: new Set(currentPath.map((n) => n.id)),
+          codeLine: 8,
         });
       }
       solve(node.right, newSum);
@@ -363,6 +395,7 @@ export function buildTreePathSum(root, targetSum) {
           description: `Backtrack to Node ${node.value} from right child.`,
           activeId: node.id,
           highlightedIds: new Set(currentPath.map((n) => n.id)),
+          codeLine: 9,
         });
       }
     }
@@ -374,6 +407,7 @@ export function buildTreePathSum(root, targetSum) {
     description: `Searching for paths that sum up to ${targetSum} starting from root.`,
     activeId: root.id,
     highlightedIds: new Set(),
+    codeLine: 1,
   });
 
   solve(root, 0);
@@ -391,6 +425,7 @@ export function buildTreePathSum(root, targetSum) {
     highlightedIds: new Set(matchPaths.flatMap((p) => p.map((n) => n.id))),
     finished: true,
     matchPaths,
+    codeLine: 1,
   });
 
   return steps;
@@ -454,6 +489,7 @@ export function buildTreeBinaryLifting(root) {
     activeId: root.id,
     highlightedIds: new Set(),
     liftTableData,
+    codeLine: 1,
   });
 
   // Example Query: Jump from node with max depth to root
@@ -470,6 +506,7 @@ export function buildTreeBinaryLifting(root) {
     activeId: maxDepthNode.id,
     highlightedIds: new Set([maxDepthNode.id]),
     liftTableData,
+    codeLine: 1,
   });
 
   let curr = maxDepthNode;
@@ -484,6 +521,7 @@ export function buildTreeBinaryLifting(root) {
       activeId: nextNode.id,
       highlightedIds: new Set([curr.id, nextNode.id]),
       liftTableData,
+      codeLine: 4,
     });
     curr = nextNode;
   }
@@ -498,6 +536,7 @@ export function buildTreeBinaryLifting(root) {
       activeId: nextNode2.id,
       highlightedIds: new Set([curr.id, nextNode2.id]),
       liftTableData,
+      codeLine: 4,
     });
     curr = nextNode2;
   }
@@ -507,6 +546,7 @@ export function buildTreeBinaryLifting(root) {
     activeId: curr.id,
     highlightedIds: new Set([curr.id]),
     liftTableData,
+    codeLine: 6,
   });
 
   return steps;
