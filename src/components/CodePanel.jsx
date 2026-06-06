@@ -96,34 +96,44 @@ export default function CodePanel({ algorithm, traversalType, currentLine, title
                     ref={(el) => {
                       if (el) lineRefs.current[lineNo] = el;
                     }}
-                    className={`relative flex gap-3 px-2 -mx-2 rounded transition-colors duration-200 ${
+                    className={`relative flex items-center gap-2 pl-2 pr-2 -ml-2 -mr-2 rounded transition-colors duration-200 ${
                       isActive ? "bg-cyan-500/15" : ""
                     }`}
                   >
+                    {/* Left vertical bar — INSIDE the line, at the very left edge */}
                     {isActive && (
                       <motion.span
-                        layoutId="code-panel-pointer"
-                        className="absolute -left-2 top-0 bottom-0 w-1 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]"
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        layoutId="code-panel-pointer-bar"
+                        className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)]"
+                        transition={{ type: "spring", stiffness: 500, damping: 32 }}
                       />
                     )}
-                    {isActive && (
-                      <motion.span
-                        initial={{ opacity: 0, x: 4 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute -left-7 top-1/2 -translate-y-1/2 text-cyan-400 text-[14px] font-bold leading-none"
-                      >
-                        ▸
-                      </motion.span>
-                    )}
+
+                    {/* Pointer arrow — INSIDE the line, in a fixed-width gutter before the line number */}
+                    <span className="relative w-3 flex-shrink-0 text-cyan-400 text-[12px] font-bold leading-none text-center select-none">
+                      {isActive && (
+                        <motion.span
+                          key={`arrow-${lineNo}`}
+                          initial={{ opacity: 0, x: -2 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 flex items-center justify-center"
+                        >
+                          ▸
+                        </motion.span>
+                      )}
+                    </span>
+
+                    {/* Line number — fixed width, right-aligned */}
                     <span
-                      className={`select-none w-5 text-right flex-shrink-0 ${
-                        isActive ? "text-cyan-400" : "text-slate-600"
+                      className={`select-none w-6 text-right flex-shrink-0 transition-colors duration-200 ${
+                        isActive ? "text-cyan-300 font-bold" : "text-slate-600"
                       }`}
                     >
                       {lineNo}
                     </span>
+
+                    {/* Code content */}
                     <span className="whitespace-pre flex-1">
                       {tokenizeLine(line).map((tok, j) => (
                         <span key={j} className={TOKEN_COLOR[tok.type]}>

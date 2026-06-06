@@ -17,6 +17,8 @@ import {
   Zap,
   Timer,
   Terminal,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { BSTModel } from "../models/TreeModel";
 import {
@@ -38,6 +40,14 @@ const getSpeedLabel = (ms) => {
   if (ms <= 1200) return "Slow";
   return "Step-by-Step";
 };
+
+/* ── Dimension scale helper (display size) ── */
+const DIM_MIN = 0.6;
+const DIM_MAX = 1.8;
+const DIM_STEP = 0.1;
+const DIM_STORAGE_KEY = "algoviz-dim-scale";
+const clampDim = (v) => Math.max(DIM_MIN, Math.min(DIM_MAX, v));
+const formatDim = (v) => `${Math.round(v * 100)}%`;
 
 export default function TreeVisualizer() {
   const canvasRef = useRef(null);
@@ -79,6 +89,15 @@ export default function TreeVisualizer() {
   const [statusBannerText, setStatusBannerText] = useState("");
   const [currentCodeLine, setCurrentCodeLine] = useState(null);
   const [cursorMode, setCursorMode] = useState("default");
+
+  const [dimensionScale, setDimensionScale] = useState(() => {
+    try {
+      const stored = parseFloat(localStorage.getItem(DIM_STORAGE_KEY));
+      return Number.isFinite(stored) ? clampDim(stored) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
 
   const stepsTimelineRef = useRef([]);
   const playbackIndexRef = useRef(-1);
@@ -126,6 +145,7 @@ export default function TreeVisualizer() {
     const dpr = window.devicePixelRatio || 1;
     const { width, height } = canvasSizeRef.current;
     const z = cameraRef.current.zoom || 1;
+    const s = dimensionScale;
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
@@ -166,7 +186,7 @@ export default function TreeVisualizer() {
 
     // Draw Edges
     ctx.strokeStyle = "#555555";
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2.2 * s;
     for (const edge of edges) {
       ctx.beginPath();
       ctx.moveTo(edge.source.x, edge.source.y);
@@ -187,38 +207,42 @@ export default function TreeVisualizer() {
         fill = "#f59e0b"; // Orange active
         border = "#b45309";
         ctx.shadowColor = "#f59e0b";
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 12 * s;
         stateLabel = "Current";
       } else if (isHighlighted) {
         fill = "#8b5cf6"; // Purple special
         border = "#6d28d9";
         ctx.shadowColor = "#8b5cf6";
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 12 * s;
         stateLabel = "Found";
       }
 
+      const outerR = 22 * s;
+      const innerR = 19 * s;
+
       ctx.fillStyle = border;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, 22, 0, 2 * Math.PI);
+      ctx.arc(node.x, node.y, outerR, 0, 2 * Math.PI);
       ctx.fill();
 
       ctx.shadowBlur = 0; // Reset
 
       ctx.fillStyle = fill;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, 19, 0, 2 * Math.PI);
+      ctx.arc(node.x, node.y, innerR, 0, 2 * Math.PI);
       ctx.fill();
 
       // Node state label (Item 12)
       if (stateLabel) {
-        ctx.font = "bold 9px sans-serif";
+        const labelFontPx = 9 * s;
+        ctx.font = `bold ${labelFontPx}px sans-serif`;
         const labelW = ctx.measureText(stateLabel).width;
         const labelX = node.x;
-        const labelY = node.y - 30;
+        const labelY = node.y - 30 * s;
 
         ctx.fillStyle = "rgba(10, 10, 10, 0.85)";
         ctx.beginPath();
-        ctx.roundRect(labelX - labelW / 2 - 5, labelY - 6, labelW + 10, 13, 4);
+        ctx.roundRect(labelX - labelW / 2 - 5 * s, labelY - 6 * s, labelW + 10 * s, 13 * s, 4 * s);
         ctx.fill();
 
         ctx.fillStyle = fill;
@@ -229,7 +253,7 @@ export default function TreeVisualizer() {
 
       // Label
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "bold 13px sans-serif";
+      ctx.font = `bold ${13 * s}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(node.label, node.x, node.y - 1);
@@ -549,7 +573,13 @@ export default function TreeVisualizer() {
 
   useEffect(() => {
     drawTree();
-  }, [nodesList, activeNodeId, highlightedNodeIds]);
+  }, [nodesList, activeNodeId, highlightedNodeIds, dimensionScale]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DIM_STORAGE_KEY, dimensionScale.toString());
+    } catch {}
+  }, [dimensionScale]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -606,6 +636,10 @@ export default function TreeVisualizer() {
       }
       if (e.key === "r" || e.key === "R") {
         resetVisualStates();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+        e.preventDefault();
+        setDimensionScale(1.0);
       }
     };
     window.addEventListener("keydown", handler);
@@ -838,6 +872,43 @@ export default function TreeVisualizer() {
           </div>
         </div>
 
+        {/* Display Size Controls */}
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+          <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Node &amp; label size</label>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
+              disabled={dimensionScale <= DIM_MIN + 1e-6}
+              title="Decrease size"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+            >
+              <Minus size={13} />
+            </button>
+            <input
+              type="range"
+              min={DIM_MIN * 100}
+              max={DIM_MAX * 100}
+              step={DIM_STEP * 100}
+              value={dimensionScale * 100}
+              onChange={(e) => setDimensionScale(clampDim(parseInt(e.target.value, 10) / 100))}
+              className="flex-1 h-1 bg-navy-700 appearance-none cursor-pointer accent-cyan-500"
+            />
+            <button
+              onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
+              disabled={dimensionScale >= DIM_MAX - 1e-6}
+              title="Increase size"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+            <span>Small</span>
+            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 text-neon-cyan tabular-nums">{formatDim(dimensionScale)}</span>
+            <span>Large</span>
+          </div>
+        </div>
+
         {/* Playback Controls Panel */}
         <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md mb-2">
           <div className="grid grid-cols-3 gap-2">
@@ -943,6 +1014,27 @@ export default function TreeVisualizer() {
 
           {/* Canvas toolbar */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
+            <div className="flex items-center bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
+                disabled={dimensionScale <= DIM_MIN + 1e-6}
+                title="Decrease node size"
+                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+              >
+                <Minus size={12} />
+              </button>
+              <span className="px-1.5 text-[10px] font-bold text-neon-cyan tabular-nums min-w-[34px] text-center">
+                {formatDim(dimensionScale)}
+              </span>
+              <button
+                onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
+                disabled={dimensionScale >= DIM_MAX - 1e-6}
+                title="Increase node size"
+                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
             <button
               onClick={captureScreenshot}
               title="Save screenshot"
@@ -1022,7 +1114,7 @@ export default function TreeVisualizer() {
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
-        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0">
+        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>

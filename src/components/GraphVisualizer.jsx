@@ -20,6 +20,8 @@ import {
   Timer,
   Terminal,
   Move,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { GraphModel, NodeState, EdgeState, Colors } from "../models/GraphModel";
 import {
@@ -61,6 +63,14 @@ const getSpeedLabel = (ms) => {
   if (ms <= 1200) return "Slow";
   return "Step-by-Step";
 };
+
+/* ── Dimension scale helper (display size) ── */
+const DIM_MIN = 0.6;
+const DIM_MAX = 1.8;
+const DIM_STEP = 0.1;
+const DIM_STORAGE_KEY = "algoviz-graph-dim-scale";
+const clampDim = (v) => Math.max(DIM_MIN, Math.min(DIM_MAX, v));
+const formatDim = (v) => `${Math.round(v * 100)}%`;
 
 /* ── Node state label helper for canvas overlay (Item 12) ── */
 const getNodeStateLabel = (state) => {
@@ -123,6 +133,15 @@ export default function GraphVisualizer() {
   const panStartRef = useRef({ x: 0, y: 0 });
 
   const [cursorMode, setCursorMode] = useState("default");
+
+  const [dimensionScale, setDimensionScale] = useState(() => {
+    try {
+      const stored = parseFloat(localStorage.getItem(DIM_STORAGE_KEY));
+      return Number.isFinite(stored) ? clampDim(stored) : 1.0;
+    } catch {
+      return 1.0;
+    }
+  });
 
   const syncNodes = () => {
     setNodesList([...graphRef.current.nodes]);
@@ -322,6 +341,7 @@ export default function GraphVisualizer() {
     const { width, height } = canvasSizeRef.current;
     const dpr = window.devicePixelRatio || 1;
     const z = cameraRef.current.zoom || 1;
+    const s = dimensionScale;
 
     ctx.save();
     ctx.scale(dpr, dpr);
@@ -366,11 +386,11 @@ export default function GraphVisualizer() {
         ctx.shadowBlur = 0;
       } else {
         ctx.shadowColor = strokeColor;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 10 * s;
       }
 
       ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = strokeWidth;
+      ctx.lineWidth = strokeWidth * s;
       ctx.beginPath();
       ctx.moveTo(u.x, u.y);
       ctx.lineTo(v.x, v.y);
@@ -381,15 +401,16 @@ export default function GraphVisualizer() {
       // Draw arrow head if directed
       if (isDirected) {
         const angle = Math.atan2(v.y - u.y, v.x - u.x);
-        const nodeRadiusOffset = 25;
+        const nodeRadiusOffset = 25 * s;
         const arrowX = v.x - nodeRadiusOffset * Math.cos(angle);
         const arrowY = v.y - nodeRadiusOffset * Math.sin(angle);
+        const arrowSize = 10 * s;
 
         ctx.fillStyle = strokeColor;
         ctx.beginPath();
         ctx.moveTo(arrowX, arrowY);
-        ctx.lineTo(arrowX - 10 * Math.cos(angle - Math.PI / 6), arrowY - 10 * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(arrowX - 10 * Math.cos(angle + Math.PI / 6), arrowY - 10 * Math.sin(angle + Math.PI / 6));
+        ctx.lineTo(arrowX - arrowSize * Math.cos(angle - Math.PI / 6), arrowY - arrowSize * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(arrowX - arrowSize * Math.cos(angle + Math.PI / 6), arrowY - arrowSize * Math.sin(angle + Math.PI / 6));
         ctx.fill();
       }
 
@@ -401,17 +422,17 @@ export default function GraphVisualizer() {
       const dy = v.y - u.y;
       const len = Math.sqrt(dx * dx + dy * dy);
       if (len > 0) {
-        midX += (-dy / len) * 12;
-        midY += (dx / len) * 12;
+        midX += (-dy / len) * 12 * s;
+        midY += (dx / len) * 12 * s;
       }
 
       const text = edge.weight.toString();
-      ctx.font = "normal 11px sans-serif";
+      ctx.font = `normal ${11 * s}px sans-serif`;
       const txtW = ctx.measureText(text).width;
 
       ctx.fillStyle = "rgba(30, 30, 30, 0.9)";
       ctx.beginPath();
-      ctx.roundRect(midX - txtW / 2 - 4, midY - 6 - 2, txtW + 8, 14, 5);
+      ctx.roundRect(midX - txtW / 2 - 4 * s, midY - 6 * s - 2, txtW + 8 * s, 14 * s, 5 * s);
       ctx.fill();
 
       ctx.fillStyle = "#D0D0D0";
@@ -423,8 +444,8 @@ export default function GraphVisualizer() {
     // Dragging Edge preview
     if (isShiftDraggingRef.current && dragSourceNodeRef.current && currentDragMousePosRef.current) {
       ctx.strokeStyle = Colors.edgeDrag;
-      ctx.lineWidth = 1.8;
-      ctx.setLineDash([8, 8]);
+      ctx.lineWidth = 1.8 * s;
+      ctx.setLineDash([8 * s, 8 * s]);
       ctx.beginPath();
       ctx.moveTo(dragSourceNodeRef.current.x, dragSourceNodeRef.current.y);
       ctx.lineTo(currentDragMousePosRef.current.x, currentDragMousePosRef.current.y);
@@ -445,19 +466,22 @@ export default function GraphVisualizer() {
         ctx.shadowBlur = 0;
       } else {
         ctx.shadowColor = nodeColor.fill;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 12 * s;
       }
+
+      const outerR = 24 * s;
+      const innerR = 21 * s;
 
       ctx.fillStyle = nodeColor.border;
       ctx.beginPath();
-      ctx.arc(x, y, 24, 0, 2 * Math.PI);
+      ctx.arc(x, y, outerR, 0, 2 * Math.PI);
       ctx.fill();
 
       ctx.shadowBlur = 0;
 
       ctx.fillStyle = nodeColor.fill;
       ctx.beginPath();
-      ctx.arc(x, y, 21, 0, 2 * Math.PI);
+      ctx.arc(x, y, innerR, 0, 2 * Math.PI);
       ctx.fill();
 
       // DFN / LOW badges if Tarjan's is selected
@@ -467,24 +491,26 @@ export default function GraphVisualizer() {
         const badgeStr = `${dfnVal}/${lowVal}`;
         ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
         ctx.beginPath();
-        ctx.roundRect(x - 18, y + 25, 36, 12, 4);
+        ctx.roundRect(x - 18 * s, y + 25 * s, 36 * s, 12 * s, 4 * s);
         ctx.fill();
         ctx.fillStyle = "#fb7185";
-        ctx.font = "bold 9px monospace";
-        ctx.fillText(badgeStr, x, y + 31);
+        ctx.font = `bold ${9 * s}px monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(badgeStr, x, y + 31 * s);
       }
 
       // Node state label (Item 12)
       const stateLabel = getNodeStateLabel(node.state);
       if (stateLabel && !node.colorOverride) {
-        ctx.font = "bold 9px sans-serif";
+        ctx.font = `bold ${9 * s}px sans-serif`;
         const labelW = ctx.measureText(stateLabel).width;
         const labelX = x;
-        const labelY = y - 32;
+        const labelY = y - 32 * s;
 
         ctx.fillStyle = "rgba(10, 10, 10, 0.85)";
         ctx.beginPath();
-        ctx.roundRect(labelX - labelW / 2 - 5, labelY - 6, labelW + 10, 13, 4);
+        ctx.roundRect(labelX - labelW / 2 - 5 * s, labelY - 6 * s, labelW + 10 * s, 13 * s, 4 * s);
         ctx.fill();
 
         ctx.fillStyle = nodeColor.fill;
@@ -495,7 +521,7 @@ export default function GraphVisualizer() {
 
       // Label
       ctx.fillStyle = "#FFFFFF";
-      ctx.font = "bold 13px sans-serif";
+      ctx.font = `bold ${13 * s}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(node.label, x, y - 1);
@@ -785,7 +811,13 @@ export default function GraphVisualizer() {
 
   useEffect(() => {
     drawCanvas();
-  }, [nodesList, distanceMap, predecessorMap, dfnMap, lowMap]);
+  }, [nodesList, distanceMap, predecessorMap, dfnMap, lowMap, dimensionScale]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DIM_STORAGE_KEY, dimensionScale.toString());
+    } catch {}
+  }, [dimensionScale]);
 
   useEffect(() => {
     if (logContainerRef.current) {
@@ -860,6 +892,10 @@ export default function GraphVisualizer() {
       }
       if (e.key === "r" || e.key === "R") {
         resetVisualizer();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+        e.preventDefault();
+        setDimensionScale(1.0);
       }
     };
     window.addEventListener("keydown", handler);
@@ -1026,6 +1062,43 @@ export default function GraphVisualizer() {
           </div>
         </div>
 
+        {/* Display Size Controls */}
+        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+          <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Node &amp; label size</label>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
+              disabled={dimensionScale <= DIM_MIN + 1e-6}
+              title="Decrease size"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+            >
+              <Minus size={13} />
+            </button>
+            <input
+              type="range"
+              min={DIM_MIN * 100}
+              max={DIM_MAX * 100}
+              step={DIM_STEP * 100}
+              value={dimensionScale * 100}
+              onChange={(e) => setDimensionScale(clampDim(parseInt(e.target.value, 10) / 100))}
+              className="flex-1 h-1 bg-navy-700 appearance-none cursor-pointer accent-cyan-500"
+            />
+            <button
+              onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
+              disabled={dimensionScale >= DIM_MAX - 1e-6}
+              title="Increase size"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
+            <span>Small</span>
+            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 text-neon-cyan tabular-nums">{formatDim(dimensionScale)}</span>
+            <span>Large</span>
+          </div>
+        </div>
+
         {/* Control Button panel */}
         <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
           <div className="grid grid-cols-3 gap-2">
@@ -1178,6 +1251,27 @@ export default function GraphVisualizer() {
 
           {/* Canvas toolbar */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
+            <div className="flex items-center bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
+                disabled={dimensionScale <= DIM_MIN + 1e-6}
+                title="Decrease node size"
+                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+              >
+                <Minus size={12} />
+              </button>
+              <span className="px-1.5 text-[10px] font-bold text-neon-cyan tabular-nums min-w-[34px] text-center">
+                {formatDim(dimensionScale)}
+              </span>
+              <button
+                onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
+                disabled={dimensionScale >= DIM_MAX - 1e-6}
+                title="Increase node size"
+                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
             <button
               onClick={captureScreenshot}
               title="Save screenshot"
@@ -1258,7 +1352,7 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
-        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0">
+        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
           <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
