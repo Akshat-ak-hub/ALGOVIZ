@@ -895,8 +895,8 @@ export default function GraphVisualizer() {
 
   return (
     <div className="bg-navy-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
-      {/* Sidebar Controls */}
-      <aside className="w-full lg:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1">
+      {/* Sidebar Panel */}
+      <aside className="w-full lg:w-[300px] xl:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1 min-w-0">
         
         {/* Toggle directed/undirected Graph type */}
         <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
@@ -1144,11 +1144,11 @@ export default function GraphVisualizer() {
       </aside>
 
       {/* Main Canvas & Separate Dedicated Workspace for Tables & Logs */}
-      <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
+      <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 min-w-0">
         {/* Canvas + Code Panel row */}
-        <div className="flex flex-col xl:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4 min-w-0">
         {/* Canvas panel */}
-        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[320px] flex-1">
+        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[320px] flex-1 min-w-0">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
             <div className="absolute top-0 left-0 right-0 h-1 bg-navy-600 z-20">
@@ -1247,7 +1247,7 @@ export default function GraphVisualizer() {
         </div>
 
           {/* Code Panel */}
-          <div className="w-full xl:w-[380px] xl:flex-shrink-0 h-[360px] xl:h-auto">
+          <div className="w-full lg:w-[300px] xl:w-[380px] lg:flex-shrink-0 h-[360px] lg:h-auto">
             <CodePanel
               algorithm={activeAlgorithm}
               currentLine={currentCodeLine}
