@@ -76,11 +76,11 @@ export function tokenizeLine(line) {
 }
 
 export const TOKEN_COLOR = {
-  keyword: "text-purple-400",
-  string: "text-emerald-400",
-  number: "text-amber-400",
-  comment: "text-slate-500 italic",
-  punct: "text-slate-500",
-  ident: "text-slate-200",
+  keyword: "text-[#ff7b72] font-semibold",
+  string: "text-[#a5d6ff]",
+  number: "text-[#79c0ff]",
+  comment: "text-[#8b949e] italic",
+  punct: "text-[#c9d1d9]",
+  ident: "text-[#e6edf3]",
   ws: "text-slate-300",
 };

@@ -56,12 +56,12 @@ export default function CodeSnippet() {
         Real implementations. Highlighted lines correspond to the active step in the visualizer.
       </p>
 
-      <div className="bg-navy-900 border border-navy-600 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(34,211,238,0.06)]">
-        <div className="flex items-center gap-1 bg-navy-950 border-b border-navy-600 px-3 py-2">
+      <div className="bg-bp-900 border border-bp-800 rounded-lg overflow-hidden shadow-sm">
+        <div className="flex items-center gap-1 bg-bp-950 border-b border-bp-800 px-3 py-2">
           <div className="flex items-center gap-1.5 mr-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+            <span className="w-2.5 h-2.5 rounded-full bg-bp-800" />
+            <span className="w-2.5 h-2.5 rounded-full bg-bp-800" />
+            <span className="w-2.5 h-2.5 rounded-full bg-bp-800" />
           </div>
           {samples.map((s, i) => {
             const isActive = i === activeIdx;
@@ -70,14 +70,14 @@ export default function CodeSnippet() {
                 key={s.id}
                 onClick={() => setActiveIdx(i)}
                 className={`relative px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-colors duration-200 cursor-pointer ${
-                  isActive ? "text-cyan-300" : "text-slate-500 hover:text-slate-300"
+                  isActive ? "text-accent" : "text-slate-500 hover:text-slate-300"
                 }`}
               >
                 {s.label}
                 {isActive && (
                   <motion.span
                     layoutId="code-tab-underline"
-                    className="absolute left-2 right-2 -bottom-2.5 h-0.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]"
+                    className="absolute left-2 right-2 -bottom-2.5 h-0.5 rounded-full bg-accent"
                   />
                 )}
               </button>
@@ -102,10 +102,10 @@ export default function CodeSnippet() {
                   <div
                     key={lineNo}
                     className={`flex gap-4 px-2 -mx-2 rounded transition-colors duration-200 ${
-                      highlighted ? "bg-cyan-500/10" : ""
+                      highlighted ? "bg-accent-muted" : ""
                     }`}
                   >
-                    <span className={`select-none w-6 text-right flex-shrink-0 ${highlighted ? "text-cyan-400" : "text-slate-600"}`}>
+                    <span className={`select-none w-6 text-right flex-shrink-0 ${highlighted ? "text-accent" : "text-slate-600"}`}>
                       {lineNo}
                     </span>
                     <span className="whitespace-pre">

@@ -1,5 +1,7 @@
 export const ALGORITHMS = [
-  // ==========================================
+  
+  
+    // ==========================================
   // TREE ALGORITHMS
   // ==========================================
   {
@@ -752,5 +754,195 @@ function dfsTarjan(u, parent, Graph):
     // 3. Check for Articulation Point (Root)
     if parent is null and children > 1:
         articulationPoints.add(u)`
-  }
+  },
+
+  // ==========================================
+  // SORTING ALGORITHMS
+  // ==========================================
+  {
+    id: "bubble-sort",
+    name: "Bubble Sort",
+    category: "sorting",
+    complexity: "O(N²)",
+    summary: "Repeatedly steps through the array, swapping adjacent elements if they are in the wrong order.",
+    timeComplexity: { best: "O(N)", average: "O(N²)", worst: "O(N²)" },
+    spaceComplexity: "O(1)",
+    explanation: "Bubble Sort iterates through the array multiple times. In each pass, adjacent elements are compared and swapped if out of order. The largest unsorted element 'bubbles up' to its correct position at the end of the array. With N elements, up to N-1 passes are needed. An early exit optimization stops early if no swaps occur in a pass.\n\nWhile simple to understand, Bubble Sort is impractical for large datasets due to its O(N²) average time complexity.",
+    steps: [
+      "Start with the unsorted array of size N.",
+      "For each pass i from 0 to N-2:",
+      "  For each adjacent pair (j, j+1) from 0 to N-2-i:",
+      "    Compare arr[j] and arr[j+1].",
+      "    If arr[j] > arr[j+1], swap them (bubble up).",
+      "After pass i, the element at index N-1-i is in its final sorted position.",
+      "Repeat until the entire array is sorted."
+    ],
+    pseudocode: `function bubbleSort(arr):
+    n = arr.length
+    for i = 0 to n-2:
+        for j = 0 to n-2-i:
+            if arr[j] > arr[j+1]:
+                swap(arr[j], arr[j+1])
+    return arr`
+  },
+  {
+    id: "selection-sort",
+    name: "Selection Sort",
+    category: "sorting",
+    complexity: "O(N²)",
+    summary: "Repeatedly selects the smallest element from the unsorted portion and swaps it to the front.",
+    timeComplexity: { best: "O(N²)", average: "O(N²)", worst: "O(N²)" },
+    spaceComplexity: "O(1)",
+    explanation: "Selection Sort divides the array into a sorted and unsorted region. It scans the unsorted region to find the minimum element, then swaps it with the element at the boundary (the first unsorted position). The boundary then shifts right by one. This process repeats until the entire array is sorted.\n\nSelection Sort is notable for minimizing swaps — at most N-1 swaps — making it useful when writes are expensive.",
+    steps: [
+      "Set boundary i = 0 (start of unsorted region).",
+      "Find the index of the minimum element in arr[i..N-1].",
+      "Swap arr[i] with the found minimum.",
+      "Increment i (expand sorted region).",
+      "Repeat until i reaches N-1."
+    ],
+    pseudocode: `function selectionSort(arr):
+    n = arr.length
+    for i = 0 to n-2:
+        minIdx = i
+        for j = i+1 to n-1:
+            if arr[j] < arr[minIdx]:
+                minIdx = j
+        swap(arr[i], arr[minIdx])
+    return arr`
+  },
+  {
+    id: "insertion-sort",
+    name: "Insertion Sort",
+    category: "sorting",
+    complexity: "O(N²)",
+    summary: "Builds the sorted array one element at a time by inserting each element into its correct position.",
+    timeComplexity: { best: "O(N)", average: "O(N²)", worst: "O(N²)" },
+    spaceComplexity: "O(1)",
+    explanation: "Insertion Sort builds the final sorted array one element at a time. It picks each element from the input and inserts it into its proper position among the already-sorted elements, shifting larger elements to the right as needed.\n\nInsertion Sort is efficient for small datasets and is adaptive (runs in O(N) on nearly-sorted arrays). It is often used as the base case in hybrid sorting algorithms like Timsort.",
+    steps: [
+      "Consider the first element as trivially sorted.",
+      "Pick the next element (key) from the unsorted region.",
+      "Compare the key with elements in the sorted region (right to left).",
+      "Shift all larger elements one position to the right.",
+      "Insert the key into the vacant position.",
+      "Repeat until all elements have been inserted."
+    ],
+    pseudocode: `function insertionSort(arr):
+    n = arr.length
+    for i = 1 to n-1:
+        key = arr[i]
+        j = i - 1
+        while j >= 0 and arr[j] > key:
+            arr[j + 1] = arr[j]
+            j--
+        arr[j + 1] = key
+    return arr`
+  },
+  {
+    id: "merge-sort",
+    name: "Merge Sort",
+    category: "sorting",
+    complexity: "O(N log N)",
+    summary: "A divide-and-conquer algorithm that recursively splits the array, sorts each half, and merges them back together.",
+    timeComplexity: { best: "O(N log N)", average: "O(N log N)", worst: "O(N log N)" },
+    spaceComplexity: "O(N)",
+    explanation: "Merge Sort is a stable, divide-and-conquer sorting algorithm. It recursively divides the input array into two halves until each sub-array has a single element (trivially sorted). Then it repeatedly merges adjacent pairs, combining two sorted sub-arrays into one sorted array.\n\nThe merge step uses two pointers and a temporary array. Merge Sort is the foundation for more advanced algorithms like Timsort. Its O(N) space requirement is the main drawback.",
+    steps: [
+      "If the array has 0 or 1 elements, it is already sorted (base case).",
+      "Split the array into two halves at the midpoint.",
+      "Recursively sort the left half.",
+      "Recursively sort the right half.",
+      "Merge the two sorted halves back together using a two-pointer technique.",
+      "Copy the merged result back into the original array."
+    ],
+    pseudocode: `function mergeSort(arr, l, r):
+    if l >= r: return
+    m = (l + r) / 2
+    mergeSort(arr, l, m)
+    mergeSort(arr, m+1, r)
+    merge(arr, l, m, r)
+
+function merge(arr, l, m, r):
+    L = arr[l..m], R = arr[m+1..r]
+    i = j = 0, k = l
+    while i < L.length and j < R.length:
+        if L[i] <= R[j]:
+            arr[k++] = L[i++]
+        else:
+            arr[k++] = R[j++]
+    while i < L.length: arr[k++] = L[i++]
+    while j < R.length: arr[k++] = R[j++]`
+  },
+  {
+    id: "quick-sort",
+    name: "Quick Sort",
+    category: "sorting",
+    complexity: "O(N log N) avg",
+    summary: "Picks a pivot, partitions the array around it, then recursively sorts the partitions.",
+    timeComplexity: { best: "O(N log N)", average: "O(N log N)", worst: "O(N²)" },
+    spaceComplexity: "O(log N) (call stack)",
+    explanation: "Quick Sort is a divide-and-conquer algorithm that selects a 'pivot' element and partitions the array so that elements smaller than the pivot go to the left and larger elements go to the right. The pivot is then in its final sorted position. The process recurses on the left and right partitions.\n\nPerformance depends heavily on pivot selection. Using a random or median-of-three pivot reduces the probability of worst-case behavior. Quick Sort is generally faster than Merge Sort in practice due to better cache locality and in-place partitioning.",
+    steps: [
+      "Choose a pivot element (typically the last element).",
+      "Initialize a partition boundary pointer i.",
+      "Scan from low to high-1: if arr[j] < pivot, swap arr[++i] with arr[j].",
+      "Place the pivot at its correct position (swap arr[i+1] with arr[high]).",
+      "Recursively sort the left partition (low to pivotIdx-1).",
+      "Recursively sort the right partition (pivotIdx+1 to high)."
+    ],
+    pseudocode: `function quickSort(arr, low, high):
+    if low >= high: return
+    pi = partition(arr, low, high)
+    quickSort(arr, low, pi-1)
+    quickSort(arr, pi+1, high)
+
+function partition(arr, low, high):
+    pivot = arr[high]
+    i = low - 1
+    for j = low to high-1:
+        if arr[j] < pivot:
+            i++
+            swap(arr[i], arr[j])
+    swap(arr[i+1], arr[high])
+    return i + 1`
+  },
+  {
+    id: "radix-sort",
+    name: "Radix Sort",
+    category: "sorting",
+    complexity: "O(D × (N + K))",
+    summary: "Sorts numbers digit-by-digit from the least significant digit to the most significant digit.",
+    timeComplexity: { best: "O(D × (N + K))", average: "O(D × (N + K))", worst: "O(D × (N + K))" },
+    spaceComplexity: "O(N + K)",
+    explanation: "Radix Sort is a non-comparison-based sorting algorithm that processes digits individually. Starting from the least significant digit (LSD), it applies a stable counting sort on each digit position. After D passes (where D is the maximum number of digits), the array is fully sorted.\n\nRadix Sort is efficient when the number of digits is small relative to N. For example, sorting 1 million 32-bit integers requires only 4 passes (one per byte). The choice of base (radix) affects performance — powers of 2 (256) are common for binary computers.",
+    steps: [
+      "Find the maximum value to determine the number of digits (D).",
+      "For each digit position (exp = 1, 10, 100, ... up to the max digit):",
+      "  Apply a stable counting sort based on the current digit (arr[i] / exp) % 10.",
+      "  Build a count array for digits 0-9.",
+      "  Compute prefix sums.",
+      "  Place elements in the output array in stable order.",
+      "  Copy output back to the original array.",
+      "After D passes, the array is fully sorted."
+    ],
+    pseudocode: `function radixSort(arr):
+    maxVal = max(arr)
+    exp = 1
+    while maxVal / exp > 0:
+        countingSortByDigit(arr, exp)
+        exp *= 10
+
+function countingSortByDigit(arr, exp):
+    n = len(arr)
+    output = [0] * n
+    count = [0] * 10
+    for v in arr: count[(v // exp) % 10]++
+    for i in 1 to 9: count[i] += count[i-1]
+    for v in reversed(arr):
+        d = (v // exp) % 10
+        output[count[d] - 1] = v
+        count[d]--
+    for i in 0 to n-1: arr[i] = output[i]`
+  },
 ];

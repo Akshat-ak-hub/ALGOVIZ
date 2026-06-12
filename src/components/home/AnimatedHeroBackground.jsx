@@ -29,10 +29,9 @@ export default function AnimatedHeroBackground() {
       const h = canvas.height / dpr;
       const count = Math.min(38, Math.max(18, Math.floor((w * h) / 28000)));
       const palette = [
-        "rgba(34,211,238,", // cyan
-        "rgba(168,85,247,", // purple
-        "rgba(16,185,129,", // emerald
-        "rgba(244,114,182,", // pink
+        "rgba(88,166,255,",  // accent blue (#58a6ff)
+        "rgba(31,111,235,",  // accent emphasis blue (#1f6feb)
+        "rgba(139,148,158,", // bp-400 slate-gray (#8b949e)
       ];
       particlesRef.current = Array.from({ length: count }, () => ({
         x: Math.random() * w,

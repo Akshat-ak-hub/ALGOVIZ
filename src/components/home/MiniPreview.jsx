@@ -309,10 +309,87 @@ function MiniGraphTarjan() {
   return <canvas ref={ref} className="block" />;
 }
 
+function MiniSorting() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const w = 120, h = 92;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+
+    // Bubble sort mini demo
+    const arr = [42, 17, 83, 6, 55, 31];
+    const n = arr.length;
+    const cellW = 14;
+    const startX = (w - n * cellW) / 2;
+    const maxVal = Math.max(...arr);
+
+    let i = 0, j = 0;
+    let raf;
+
+    const draw = () => {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.font = "bold 9px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      for (let k = 0; k < n; k++) {
+        const x = startX + k * cellW;
+        const hFrac = (arr[k] / maxVal) * 40;
+        const isComparing = k === j || k === j + 1;
+        const isSorted = k >= n - i;
+        const fill = isSorted ? "#475569" : isComparing ? "#94a3b8" : "#64748b";
+        const textColor = isSorted ? "#64748b" : "#e2e8f0";
+
+        ctx.fillStyle = fill;
+        const r = 3;
+        const bx = x + 1, by = 10, bw = cellW - 2, bh = Math.max(hFrac, 6);
+        ctx.beginPath();
+        ctx.moveTo(bx + r, by);
+        ctx.lineTo(bx + bw - r, by);
+        ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+        ctx.lineTo(bx + bw, by + bh - r);
+        ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+        ctx.lineTo(bx + r, by + bh);
+        ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+        ctx.lineTo(bx, by + r);
+        ctx.quadraticCurveTo(bx, by, bx + r, by);
+        ctx.fill();
+
+        ctx.fillStyle = textColor;
+        ctx.fillText(arr[k].toString(), x + cellW / 2, by + bh / 2);
+      }
+
+      // Bubble step
+      if (j < n - 1 - i) {
+        if (arr[j] > arr[j + 1]) {
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+        }
+        j++;
+      } else {
+        j = 0;
+        i++;
+        if (i >= n - 1) i = 0;
+      }
+      raf = setTimeout(draw, 500);
+    };
+    draw();
+    return () => clearTimeout(raf);
+  }, []);
+  return <canvas ref={ref} className="block" />;
+}
+
 export default function MiniPreview({ type }) {
   if (type === "tree") return <MiniTreeSearch />;
   if (type === "dfs") return <MiniGraphDFS />;
   if (type === "dijkstra") return <MiniGraphDijkstra />;
   if (type === "tarjan") return <MiniGraphTarjan />;
+  if (type === "sorting") return <MiniSorting />;
   return null;
 }

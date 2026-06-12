@@ -3,29 +3,20 @@ import { MousePointerClick, PlayCircle, BookOpenCheck } from "lucide-react";
 const steps = [
   {
     icon: MousePointerClick,
-    color: "emerald",
     title: "Build",
     desc: "Click to add nodes. Drag to reposition. Right-click to remove. Pan and zoom freely.",
   },
   {
     icon: PlayCircle,
-    color: "cyan",
     title: "Animate",
-    desc: "Pick an algorithm and watch each step light up — active node in amber, visited in cyan, result in purple.",
+    desc: "Pick an algorithm and watch each step light up — active nodes, visited paths, and results in real time.",
   },
   {
     icon: BookOpenCheck,
-    color: "purple",
     title: "Learn",
-    desc: "Read the live log for step-by-step explanations. Inspect BFS queues, lifting tables, and DSU parents.",
+    desc: "Read the live log for step-by-step explanations. Inspect BFS queues, tree structures, and sorting states.",
   },
 ];
-
-const colorMap = {
-  emerald: { text: "text-emerald-400", border: "border-emerald-500/30", glow: "shadow-[0_0_30px_rgba(16,185,129,0.15)]" },
-  cyan: { text: "text-cyan-400", border: "border-cyan-500/30", glow: "shadow-[0_0_30px_rgba(34,211,238,0.15)]" },
-  purple: { text: "text-purple-400", border: "border-purple-500/30", glow: "shadow-[0_0_30px_rgba(168,85,247,0.15)]" },
-};
 
 export default function HowItWorks() {
   return (
@@ -39,26 +30,25 @@ export default function HowItWorks() {
 
       <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Connecting line (desktop) */}
-        <div className="hidden md:block absolute top-9 left-[16%] right-[16%] h-px bg-gradient-to-r from-emerald-500/40 via-cyan-500/40 to-purple-500/40" />
+        <div className="hidden md:block absolute top-9 left-[16%] right-[16%] h-px bg-bp-800" />
 
         {steps.map((s, i) => {
-          const c = colorMap[s.color];
           const Icon = s.icon;
           return (
             <div
               key={s.title}
-              className={`relative bg-navy-800 border ${c.border} rounded-2xl p-6 flex flex-col items-center text-center ${c.glow} transition-transform duration-300 hover:-translate-y-1`}
+              className="relative bg-bp-900 border border-bp-800 rounded-lg p-6 flex flex-col items-center text-center hover:border-bp-700 hover:bg-bp-850/50 transition-all duration-200"
             >
-              <div className={`relative w-12 h-12 rounded-xl bg-navy-900 border ${c.border} flex items-center justify-center mb-4`}>
-                <Icon size={20} className={c.text} />
-                <span className={`absolute -top-2 -right-2 w-6 h-6 rounded-full bg-navy-900 border ${c.border} text-[10px] font-bold ${c.text} flex items-center justify-center`}>
+              <div className="relative w-12 h-12 rounded-lg bg-bp-850 border border-bp-700 flex items-center justify-center mb-4">
+                <Icon size={20} className="text-accent" />
+                <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-bp-900 border border-bp-700 text-[10px] font-bold text-accent flex items-center justify-center">
                   {i + 1}
                 </span>
               </div>
-              <h3 className={`font-bold text-sm ${c.text} mb-2 tracking-wider uppercase`}>
+              <h3 className="font-bold text-xs text-accent mb-2 tracking-wider uppercase">
                 {s.title}
               </h3>
-              <p className="text-slate-400 text-xs leading-relaxed">
+              <p className="text-bp-300 text-xs leading-relaxed">
                 {s.desc}
               </p>
             </div>

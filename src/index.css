@@ -1,52 +1,71 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Navy surface palette (dark UI backgrounds) ── */
-  --color-navy-950: #0b0d0f;
-  --color-navy-900: #111418;
-  --color-navy-850: #141414;
-  --color-navy-800: #161a1f;
-  --color-navy-750: #1a1a1a;
-  --color-navy-700: #1d222a;
-  --color-navy-650: #1e1e1e;
-  --color-navy-600: #2a313b;
-  --color-navy-550: #2d2d2d;
-  --color-navy-500: #2e2e2e;
-  --color-navy-400: #3a3a3a;
+  /* ── Blueprint surface palette (blue-tinted dark) ── */
+  --color-bp-950: #0d1117;
+  --color-bp-900: #161b22;
+  --color-bp-850: #1c2128;
+  --color-bp-800: #21262d;
+  --color-bp-700: #30363d;
+  --color-bp-600: #484f58;
+  --color-bp-500: #6e7681;
+  --color-bp-400: #8b949e;
+  --color-bp-300: #b1bac4;
+  --color-bp-200: #c9d1d9;
+  --color-bp-100: #e6edf3;
+  --color-bp-50: #f0f6fc;
 
-  /* ── Neon accent palette ── */
-  --color-neon-cyan: #24d3bc;
-  --color-neon-blue: #3aa7ff;
-  --color-neon-green: #1fae7a;
-  --color-neon-yellow: #f6c945;
-  --color-neon-orange: #f59e0b;
-  --color-neon-red: #ef4444;
-  --color-neon-purple: #8b5cf6;
-  --color-neon-pink: #ec4899;
+  /* ── Legacy navy aliases (mapped to Blueprint values for compatibility) ── */
+  --color-navy-950: #0d1117;
+  --color-navy-900: #161b22;
+  --color-navy-850: #1c2128;
+  --color-navy-800: #21262d;
+  --color-navy-750: #1c2128;
+  --color-navy-700: #30363d;
+  --color-navy-650: #21262d;
+  --color-navy-600: #30363d;
+  --color-navy-550: #30363d;
+  --color-navy-500: #484f58;
+  --color-navy-400: #6e7681;
+
+  /* ── Blueprint accent ── */
+  --color-accent: #58a6ff;
+  --color-accent-emphasis: #1f6feb;
+  --color-accent-muted: rgba(56, 139, 253, 0.15);
+
+  /* ── Semantic colors ── */
+  --color-neon-cyan: #58a6ff;
+  --color-neon-blue: #58a6ff;
+  --color-neon-green: #3fb950;
+  --color-neon-yellow: #d29922;
+  --color-neon-orange: #d29922;
+  --color-neon-red: #f85149;
+  --color-neon-purple: #bc8cff;
+  --color-neon-pink: #f778ba;
 
   /* ── Surface shorthand tokens ── */
-  --color-surface-base: #121212;
-  --color-surface-raised: #1e1e1e;
-  --color-surface-overlay: #272727;
-  --color-surface-border: #2e2e2e;
-  --color-surface-subtle: #1b1b1b;
-  --color-surface-inset: #141414;
-  --color-surface-header: #161616;
-  --color-surface-hover: #202020;
-  --color-surface-muted: #242424;
-  --color-surface-control: #2d2d2d;
-  --color-surface-card: #1a1a1a;
+  --color-surface-base: #0d1117;
+  --color-surface-raised: #161b22;
+  --color-surface-overlay: #1c2128;
+  --color-surface-border: #30363d;
+  --color-surface-subtle: #161b22;
+  --color-surface-inset: #0d1117;
+  --color-surface-header: #161b22;
+  --color-surface-hover: #1c2128;
+  --color-surface-muted: #21262d;
+  --color-surface-control: #21262d;
+  --color-surface-card: #161b22;
 
   /* ── Typography ── */
-  --font-sans: 'Sora', ui-sans-serif, system-ui;
+  --font-sans: 'Inter', ui-sans-serif, system-ui;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 body {
-  color: #e2e8f0;
+  color: #c9d1d9;
   background-color: var(--color-surface-base);
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
 }
 
@@ -60,26 +79,26 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2e303a;
+  background: #30363d;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3e414f;
+  background: #484f58;
 }
 
-/* ── Global focus ring consistency (Item 6) ── */
+/* ── Global focus ring consistency ── */
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #06b6d4 !important;
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.3);
+  border-color: #58a6ff !important;
+  box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.25);
 }
 
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.3);
+  box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.25);
 }
 
 /* ── Toast animations ── */
@@ -113,7 +132,7 @@ button:focus-visible {
   animation: toast-slide-out 0.25s ease-in forwards;
 }
 
-/* ── Empty state pulse animation (Item 5) ── */
+/* ── Empty state pulse animation ── */
 @keyframes gentle-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }

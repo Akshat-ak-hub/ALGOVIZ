@@ -5,6 +5,7 @@ import Footer from "./components/Footer";
 import HomePage from "./pages/HomePage";
 import TreeVisualizer from "./components/TreeVisualizer";
 import GraphVisualizer from "./components/GraphVisualizer";
+import SortingVisualizer from "./components/SortingVisualizer";
 import LearnPage from "./pages/LearnPage";
 
 const pageVariants = {
@@ -29,6 +30,8 @@ export default function App() {
         return <TreeVisualizer />;
       case "graph-visualizer":
         return <GraphVisualizer />;
+      case "sorting-visualizer":
+        return <SortingVisualizer />;
       case "learn":
         return <LearnPage />;
       default:
@@ -37,7 +40,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-navy-950 text-slate-200 font-sans">
+    <div className="flex flex-col min-h-screen bg-surface-base text-slate-200 font-sans">
       <NavBarHeader currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <main className="flex-grow">
         <AnimatePresence mode="wait">

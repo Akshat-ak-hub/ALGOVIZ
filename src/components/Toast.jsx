@@ -5,35 +5,31 @@ import { ToastContext } from "../hooks/useToast";
 const TOAST_VARIANTS = {
   success: {
     icon: CheckCircle,
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/30",
-    text: "text-emerald-400",
-    iconColor: "text-emerald-400",
-    glow: "shadow-[0_0_15px_rgba(16,185,129,0.15)]",
+    bg: "bg-[#3fb950]/10",
+    border: "border-[#3fb950]/30",
+    text: "text-[#e6edf3]",
+    iconColor: "text-[#3fb950]",
   },
   error: {
     icon: XCircle,
-    bg: "bg-rose-500/10",
-    border: "border-rose-500/30",
-    text: "text-rose-400",
-    iconColor: "text-rose-400",
-    glow: "shadow-[0_0_15px_rgba(239,68,68,0.15)]",
+    bg: "bg-[#f85149]/10",
+    border: "border-[#f85149]/30",
+    text: "text-[#e6edf3]",
+    iconColor: "text-[#f85149]",
   },
   warning: {
     icon: AlertTriangle,
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
-    text: "text-amber-400",
-    iconColor: "text-amber-400",
-    glow: "shadow-[0_0_15px_rgba(245,158,11,0.15)]",
+    bg: "bg-[#d29922]/10",
+    border: "border-[#d29922]/30",
+    text: "text-[#e6edf3]",
+    iconColor: "text-[#d29922]",
   },
   info: {
     icon: Info,
-    bg: "bg-cyan-500/10",
-    border: "border-cyan-500/30",
-    text: "text-cyan-400",
-    iconColor: "text-cyan-400",
-    glow: "shadow-[0_0_15px_rgba(6,182,212,0.15)]",
+    bg: "bg-[#58a6ff]/10",
+    border: "border-[#58a6ff]/30",
+    text: "text-[#e6edf3]",
+    iconColor: "text-[#58a6ff]",
   },
 };
 
@@ -93,8 +89,8 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border backdrop-blur-xl
-                ${v.bg} ${v.border} ${v.glow}
+              className={`pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-lg border backdrop-blur-xl shadow-md
+                ${v.bg} ${v.border}
                 ${toast.exiting ? "toast-exit" : "toast-enter"}`}
             >
               <Icon size={18} className={`${v.iconColor} flex-shrink-0 mt-0.5`} />
