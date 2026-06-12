@@ -77,8 +77,8 @@ const getNodeStateLabel = (state) => {
   switch (state) {
     case NodeState.CURRENT: return "Current";
     case NodeState.VISITED: return "Visited";
-    case NodeState.IN_PATH: return "In Path";
-    case NodeState.SPECIAL: return "Special";
+    case NodeState.IN_PATH: return "Final Path";
+    case NodeState.SPECIAL: return "Comparing";
     default: return null;
   }
 };
@@ -337,9 +337,18 @@ export default function GraphVisualizer() {
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
     const ctx = canvas.getContext("2d");
-    const { width, height } = canvasSizeRef.current;
     const dpr = window.devicePixelRatio || 1;
+    const rect = parent.getBoundingClientRect();
+    const w = Math.max(rect.width - 2, 400);
+    const h = 360;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvasSizeRef.current = { width: w, height: h };
     const z = cameraRef.current.zoom || 1;
     const s = dimensionScale;
 
@@ -348,7 +357,7 @@ export default function GraphVisualizer() {
 
     // Clear in screen space (before camera transform)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, w, h);
 
     // Apply camera transform: translate then scale
     ctx.translate(cameraRef.current.x, cameraRef.current.y);
@@ -358,8 +367,8 @@ export default function GraphVisualizer() {
     const gridSize = 40;
     const startX = Math.floor(-cameraRef.current.x / z / gridSize) * gridSize;
     const startY = Math.floor(-cameraRef.current.y / z / gridSize) * gridSize;
-    const endX = (-cameraRef.current.x) / z + width / z + gridSize;
-    const endY = (-cameraRef.current.y) / z + height / z + gridSize;
+    const endX = (-cameraRef.current.x) / z + w / z + gridSize;
+    const endY = (-cameraRef.current.y) / z + h / z + gridSize;
 
     ctx.strokeStyle = Colors.grid;
     ctx.lineWidth = 0.5;
@@ -462,27 +471,33 @@ export default function GraphVisualizer() {
         nodeColor = { fill: node.colorOverride, border: "#111" };
       }
 
-      if (node.state === NodeState.UNVISITED) {
-        ctx.shadowBlur = 0;
-      } else {
+      // Reset shadow state before each node
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+
+      if (node.state !== NodeState.UNVISITED) {
         ctx.shadowColor = nodeColor.fill;
         ctx.shadowBlur = 12 * s;
       }
 
-      const outerR = 24 * s;
-      const innerR = 21 * s;
+      const r = 22 * s;
 
-      ctx.fillStyle = nodeColor.border;
-      ctx.beginPath();
-      ctx.arc(x, y, outerR, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.shadowBlur = 0;
-
+      // Solid filled circle
       ctx.fillStyle = nodeColor.fill;
       ctx.beginPath();
-      ctx.arc(x, y, innerR, 0, 2 * Math.PI);
+      ctx.arc(x, y, r, 0, 2 * Math.PI);
       ctx.fill();
+
+      // Reset shadow before border
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+
+      // Subtle border
+      ctx.strokeStyle = nodeColor.border;
+      ctx.lineWidth = 2 * s;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.stroke();
 
       // DFN / LOW badges if Tarjan's is selected
       if (activeAlgorithm === "bridges" && dfnMap.has(node.id)) {
@@ -500,31 +515,33 @@ export default function GraphVisualizer() {
         ctx.fillText(badgeStr, x, y + 31 * s);
       }
 
-      // Node state label (Item 12)
+      // Node state label
       const stateLabel = getNodeStateLabel(node.state);
       if (stateLabel && !node.colorOverride) {
-        ctx.font = `bold ${9 * s}px sans-serif`;
+        const labelFontPx = 9 * s;
+        ctx.font = `bold ${labelFontPx}px sans-serif`;
         const labelW = ctx.measureText(stateLabel).width;
         const labelX = x;
-        const labelY = y - 32 * s;
+        const labelY = y - 30 * s;
 
-        ctx.fillStyle = "rgba(10, 10, 10, 0.85)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.beginPath();
-        ctx.roundRect(labelX - labelW / 2 - 5 * s, labelY - 6 * s, labelW + 10 * s, 13 * s, 4 * s);
+        ctx.roundRect(labelX - labelW / 2 - 4 * s, labelY - 6 * s, labelW + 8 * s, 13 * s, 3 * s);
         ctx.fill();
 
-        ctx.fillStyle = nodeColor.fill;
+        ctx.fillStyle = nodeColor.border;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(stateLabel, labelX, labelY);
       }
 
-      // Label
-      ctx.fillStyle = "#FFFFFF";
+      // Node value label
+      const textColor = node.state === NodeState.SPECIAL ? "#1a1a1a" : "#ffffff";
+      ctx.fillStyle = textColor;
       ctx.font = `bold ${13 * s}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(node.label, x, y - 1);
+      ctx.fillText(node.label, x, y);
     }
 
     ctx.restore();
@@ -827,32 +844,12 @@ export default function GraphVisualizer() {
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-
-      const parentWidth = rect.width || 800;
-      const parentHeight = 360;
-
-      canvas.width = parentWidth * dpr;
-      canvas.height = parentHeight * dpr;
-      canvas.style.width = `${parentWidth}px`;
-      canvas.style.height = `${parentHeight}px`;
-
-      canvasSizeRef.current = { width: parentWidth, height: parentHeight };
-      drawCanvas();
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    drawCanvas();
+    const onResize = () => drawCanvas();
+    window.addEventListener("resize", onResize);
     generateRandomGraph();
-
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", onResize);
       clearRunningInterval();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -930,18 +927,18 @@ export default function GraphVisualizer() {
   const progressPercent = totalStepsCount > 0 ? (currentStepIdx / totalStepsCount) * 100 : 0;
 
   return (
-    <div className="bg-navy-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
+    <div className="bg-bp-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
       {/* Sidebar Panel */}
       <aside className="w-full lg:w-[300px] xl:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1 min-w-0">
         
         {/* Toggle directed/undirected Graph type */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Graph Mode</label>
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => handleDirectedToggle(false)}
               className={`text-xs py-2 font-bold rounded-lg cursor-pointer border transition-all duration-200 ${
-                !isDirected ? "bg-cyan-500/10 border-cyan-500/30 text-neon-cyan" : "border-transparent text-slate-400 hover:text-slate-300"
+                !isDirected ? "bg-accent/10 border-accent/30 text-accent" : "border-transparent text-slate-400 hover:text-slate-300"
               }`}
             >
               Undirected
@@ -949,7 +946,7 @@ export default function GraphVisualizer() {
             <button
               onClick={() => handleDirectedToggle(true)}
               className={`text-xs py-2 font-bold rounded-lg cursor-pointer border transition-all duration-200 ${
-                isDirected ? "bg-cyan-500/10 border-cyan-500/30 text-neon-cyan" : "border-transparent text-slate-400 hover:text-slate-300"
+                isDirected ? "bg-accent/10 border-accent/30 text-accent" : "border-transparent text-slate-400 hover:text-slate-300"
               }`}
             >
               Directed
@@ -958,15 +955,15 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Algorithm selection dropdown */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-            <Network size={13} className="text-neon-cyan" />
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-700 pb-2 flex items-center gap-1.5">
+            <Network size={13} className="text-accent" />
             Select Algorithm
           </h2>
           <select
             value={activeAlgorithm}
             onChange={(e) => setActiveAlgorithm(e.target.value)}
-            className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer outline-none"
+            className="bg-bp-950 border border-bp-700 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer outline-none"
           >
             <optgroup label="Traversals & Order">
               <option value="dfs">DFS Traversal</option>
@@ -1002,7 +999,7 @@ export default function GraphVisualizer() {
                   value={sourceNodeId}
                   onChange={(e) => setSourceNodeId(e.target.value)}
                   disabled={isRunning}
-                  className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
+                  className="bg-bp-950 border border-bp-700 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
                 >
                   {nodesList.length === 0 ? (
                     <option value="" disabled>No nodes available</option>
@@ -1021,7 +1018,7 @@ export default function GraphVisualizer() {
                     value={destNodeId}
                     onChange={(e) => setDestNodeId(e.target.value)}
                     disabled={isRunning}
-                    className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
+                    className="bg-bp-950 border border-bp-700 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer"
                   >
                     <option value="all">All nodes</option>
                     {nodesList.map((n) => (
@@ -1044,7 +1041,7 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Speed Controls */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Playback speed</label>
           <input
             type="range"
@@ -1053,24 +1050,24 @@ export default function GraphVisualizer() {
             step="50"
             value={speedMs}
             onChange={(e) => setSpeedMs(parseInt(e.target.value, 10))}
-            className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
+            className="w-full h-1 bg-bp-700 rounded appearance-none cursor-pointer accent-accent"
           />
           <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
             <span className="flex items-center gap-1"><Zap size={11} /> Fast</span>
-            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 rounded text-neon-cyan">{getSpeedLabel(speedMs)} · {speedMs}ms</span>
+            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 rounded text-accent">{getSpeedLabel(speedMs)} · {speedMs}ms</span>
             <span className="flex items-center gap-1"><Timer size={11} /> Slow</span>
           </div>
         </div>
 
         {/* Display Size Controls */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Node &amp; label size</label>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
               disabled={dimensionScale <= DIM_MIN + 1e-6}
               title="Decrease size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-700 hover:bg-bp-600 disabled:opacity-30 disabled:hover:bg-bp-700 text-slate-200 cursor-pointer transition duration-200"
             >
               <Minus size={13} />
             </button>
@@ -1081,31 +1078,31 @@ export default function GraphVisualizer() {
               step={DIM_STEP * 100}
               value={dimensionScale * 100}
               onChange={(e) => setDimensionScale(clampDim(parseInt(e.target.value, 10) / 100))}
-              className="flex-1 h-1 bg-navy-700 appearance-none cursor-pointer accent-cyan-500"
+              className="flex-1 h-1 bg-bp-700 appearance-none cursor-pointer accent-accent"
             />
             <button
               onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
               disabled={dimensionScale >= DIM_MAX - 1e-6}
               title="Increase size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-700 hover:bg-bp-600 disabled:opacity-30 disabled:hover:bg-bp-700 text-slate-200 cursor-pointer transition duration-200"
             >
               <Plus size={13} />
             </button>
           </div>
           <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
             <span>Small</span>
-            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 text-neon-cyan tabular-nums">{formatDim(dimensionScale)}</span>
+            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 text-accent tabular-nums">{formatDim(dimensionScale)}</span>
             <span>Large</span>
           </div>
         </div>
 
         {/* Control Button panel */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={stepBackward}
               disabled={!isRunning || currentStepIdx <= 1}
-              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              className="flex items-center justify-center gap-1 bg-bp-700 hover:bg-bp-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
             >
               <ChevronLeft size={12} />
               Back
@@ -1113,7 +1110,7 @@ export default function GraphVisualizer() {
             <button
               onClick={togglePlayPause}
               disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              className="flex items-center justify-center gap-1 bg-bp-700 hover:bg-bp-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
             >
               {isPlaying ? <Pause size={12} /> : <Play size={12} />}
               {isPlaying ? "Pause" : "Play"}
@@ -1121,7 +1118,7 @@ export default function GraphVisualizer() {
             <button
               onClick={stepForward}
               disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              className="flex items-center justify-center gap-1 bg-bp-700 hover:bg-bp-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
             >
               Next
               <ChevronRight size={12} />
@@ -1137,7 +1134,7 @@ export default function GraphVisualizer() {
                 max={totalStepsCount - 1}
                 value={Math.max(0, currentStepIdx - 1)}
                 onChange={(e) => seekToStep(parseInt(e.target.value, 10))}
-                className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
+                className="w-full h-1 bg-bp-700 rounded appearance-none cursor-pointer accent-accent"
               />
               <div className="text-center text-[9px] font-bold text-slate-500">
                 Step {currentStepIdx} / {totalStepsCount}
@@ -1155,9 +1152,9 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Graph Editor Controls */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-            <Activity size={13} className="text-neon-cyan" />
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-700 pb-2 flex items-center gap-1.5">
+            <Activity size={13} className="text-accent" />
             Graph Editor
           </h2>
           <div className="flex items-center justify-between gap-4">
@@ -1169,13 +1166,13 @@ export default function GraphVisualizer() {
               value={nodeCountSetting}
               onChange={(e) => setNodeCountSetting(e.target.value)}
               disabled={isRunning}
-              className="w-16 bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-2 py-1 text-center outline-none"
+              className="w-16 bg-bp-950 border border-bp-700 rounded-lg text-slate-200 text-xs px-2 py-1 text-center outline-none"
             />
           </div>
           <button
             onClick={generateRandomGraph}
             disabled={isRunning}
-            className="w-full flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-accent-emphasis hover:bg-accent-emphasis text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
           >
             <Shuffle size={12} />
             Random Graph
@@ -1183,7 +1180,7 @@ export default function GraphVisualizer() {
           <button
             onClick={clearGraph}
             disabled={isRunning}
-            className="w-full flex items-center justify-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 text-slate-200 font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-bp-700 hover:bg-bp-600 text-slate-200 font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
           >
             <Trash2 size={12} />
             Clear Graph
@@ -1191,26 +1188,26 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Legend (Item 14 — synchronized) */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md flex-shrink-0 mb-2">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2">
+        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm flex-shrink-0 mb-2">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-700 pb-2">
             Legend
           </h2>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("UNVISITED") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#6B7280] border border-[#9CA3AF]" />
               <span className="text-slate-400 font-medium">Unvisited</span>
             </div>
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("CURRENT") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
-              <span className="text-slate-400 font-medium">Current Node</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] border border-[#67E8F9] shadow-[0_0_6px_#06B6D4]" />
+              <span className="text-slate-400 font-medium">Current</span>
             </div>
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("VISITED") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500 shadow-[0_0_6px_#06b6d4]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] border border-[#86EFAC] shadow-[0_0_6px_#22C55E]" />
               <span className="text-slate-400 font-medium">Visited</span>
             </div>
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("IN_PATH") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_#ef4444]" />
-              <span className="text-slate-400 font-medium">Tree Path</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] border border-[#FDBA74] shadow-[0_0_6px_#F97316]" />
+              <span className="text-slate-400 font-medium">Final Path</span>
             </div>
           </div>
         </div>
@@ -1221,12 +1218,12 @@ export default function GraphVisualizer() {
         {/* Canvas + Code Panel row */}
         <div className="flex flex-col lg:flex-row gap-4 min-w-0">
         {/* Canvas panel */}
-        <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[320px] flex-1 min-w-0">
+        <div className="bg-bp-900 border border-bp-700 rounded-lg relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[320px] flex-1 min-w-0">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
-            <div className="absolute top-0 left-0 right-0 h-1 bg-navy-600 z-20">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-bp-700 z-20">
               <div
-                className="h-full bg-cyan-500 rounded-r transition-all duration-300 ease-out"
+                className="h-full bg-accent rounded-r transition-all duration-300 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -1251,23 +1248,23 @@ export default function GraphVisualizer() {
 
           {/* Canvas toolbar */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
-            <div className="flex items-center bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg overflow-hidden">
+            <div className="flex items-center bg-bp-950/80 backdrop-blur-sm border border-bp-700 rounded-lg overflow-hidden">
               <button
                 onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
                 disabled={dimensionScale <= DIM_MIN + 1e-6}
                 title="Decrease node size"
-                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+                className="p-1.5 text-slate-400 hover:text-accent hover:bg-bp-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
               >
                 <Minus size={12} />
               </button>
-              <span className="px-1.5 text-[10px] font-bold text-neon-cyan tabular-nums min-w-[34px] text-center">
+              <span className="px-1.5 text-[10px] font-bold text-accent tabular-nums min-w-[34px] text-center">
                 {formatDim(dimensionScale)}
               </span>
               <button
                 onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
                 disabled={dimensionScale >= DIM_MAX - 1e-6}
                 title="Increase node size"
-                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+                className="p-1.5 text-slate-400 hover:text-accent hover:bg-bp-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
               >
                 <Plus size={12} />
               </button>
@@ -1275,15 +1272,15 @@ export default function GraphVisualizer() {
             <button
               onClick={captureScreenshot}
               title="Save screenshot"
-              className="p-1.5 bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg text-slate-400 hover:text-neon-cyan hover:border-cyan-500/30 cursor-pointer transition-all duration-200"
+              className="p-1.5 bg-bp-950/80 backdrop-blur-sm border border-bp-700 rounded-lg text-slate-400 hover:text-accent hover:border-accent/30 cursor-pointer transition-all duration-200"
             >
               <Camera size={14} />
             </button>
             <button
               onClick={() => setShowHelpOverlay(!showHelpOverlay)}
               title="Canvas help"
-              className={`p-1.5 bg-navy-950/80 backdrop-blur-sm border rounded-lg cursor-pointer transition-all duration-200 ${
-                showHelpOverlay ? "border-cyan-500/30 text-neon-cyan" : "border-navy-600 text-slate-400 hover:text-neon-cyan hover:border-cyan-500/30"
+              className={`p-1.5 bg-bp-950/80 backdrop-blur-sm border rounded-lg cursor-pointer transition-all duration-200 ${
+                showHelpOverlay ? "border-accent/30 text-accent" : "border-bp-700 text-slate-400 hover:text-accent hover:border-accent/30"
               }`}
             >
               <HelpCircle size={14} />
@@ -1292,21 +1289,21 @@ export default function GraphVisualizer() {
 
           {/* Help Overlay when Canvas is empty OR help is toggled (Items 5 + 10) */}
           {(nodesList.length === 0 || showHelpOverlay) && (
-            <div className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-center pointer-events-none p-6 z-10">
+            <div className="absolute inset-0 bg-bp-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-center pointer-events-none p-6 z-10">
               <div className="flex items-center gap-3 animate-gentle-pulse">
-                <MousePointer size={16} className="text-neon-cyan" />
+                <MousePointer size={16} className="text-accent" />
                 <p className="text-sm font-semibold text-slate-300">
                   Click anywhere to add a Node
                 </p>
               </div>
               <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.15s" }}>
-                <ArrowUpFromDot size={16} className="text-neon-cyan" />
+                <ArrowUpFromDot size={16} className="text-accent" />
                 <p className="text-sm font-semibold text-slate-300">
                   Shift + Drag between nodes to connect Edges
                 </p>
               </div>
               <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.3s" }}>
-                <Hand size={16} className="text-neon-cyan" />
+                <Hand size={16} className="text-accent" />
                 <p className="text-sm font-semibold text-slate-300">
                   Drag a node to reposition it
                 </p>
@@ -1318,13 +1315,13 @@ export default function GraphVisualizer() {
                 </p>
               </div>
               <div className="flex items-center gap-3 animate-gentle-pulse" style={{ animationDelay: "0.6s" }}>
-                <Move size={16} className="text-neon-cyan" />
+                <Move size={16} className="text-accent" />
                 <p className="text-sm font-semibold text-slate-300">
                   Middle-click + drag to pan · Scroll / pinch to zoom
                 </p>
               </div>
-              <div className="h-[1px] bg-navy-600 my-1 w-40" />
-              <p className="text-neon-cyan font-bold text-sm">
+              <div className="h-[1px] bg-bp-700 my-1 w-40" />
+              <p className="text-accent font-bold text-sm">
                 Or click "Random Graph" to auto-build!
               </p>
             </div>
@@ -1332,7 +1329,7 @@ export default function GraphVisualizer() {
 
           {/* Top Status execution banner */}
           {isRunning && (
-            <div className="absolute top-6 left-4 right-4 bg-navy-950/90 backdrop-blur-md border border-navy-600 rounded-xl p-3 shadow-md pointer-events-none z-10">
+            <div className="absolute top-6 left-4 right-4 bg-bp-950/90 backdrop-blur-md border border-bp-700 rounded-lg p-3 shadow-sm pointer-events-none z-10">
               <span className="text-xs font-bold text-amber-400 leading-relaxed block text-center">
                 {statusBannerText}
               </span>
@@ -1352,20 +1349,20 @@ export default function GraphVisualizer() {
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
-        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">Scroll</kbd> Zoom</span>
+        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-bp-800/50 border border-bp-700/50 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
+          <span><kbd className="bg-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
+          <span><kbd className="bg-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
+          <span><kbd className="bg-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
+          <span><kbd className="bg-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
+          <span><kbd className="bg-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">Scroll</kbd> Zoom</span>
         </div>
 
         {/* Separate Workspace for DSU or Distance Tables (Requested by user to prevent overlaps) */}
         {((activeAlgorithm === "dsu" && dsuParentsList.length > 0) ||
           ((activeAlgorithm === "dijkstra" || activeAlgorithm === "bellman") && distanceMap.size > 0)) && (
-          <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-              <Table size={14} className="text-neon-cyan" />
+          <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-700 pb-2 flex items-center gap-1.5">
+              <Table size={14} className="text-accent" />
               Algorithm Results & Analytics
             </h3>
 
@@ -1376,20 +1373,20 @@ export default function GraphVisualizer() {
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Disjoint Set Union (DSU) Mapping
                   </h4>
-                  <div className="overflow-x-auto border border-navy-600 rounded bg-navy-950 max-h-[200px]">
+                  <div className="overflow-x-auto border border-bp-700 rounded bg-bp-950 max-h-[200px]">
                     <table className="w-full text-[10px] text-center border-collapse font-mono">
-                      <thead className="bg-navy-800 text-neon-cyan border-b border-navy-600 text-[8px] uppercase tracking-wider">
+                      <thead className="bg-bp-800 text-accent border-b border-bp-700 text-[8px] uppercase tracking-wider">
                         <tr>
                           <th className="p-2 font-sans font-bold">Node Value</th>
                           <th className="p-2 font-sans font-bold">Representative Parent</th>
                           <th className="p-2 font-sans font-bold">Set Rank</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-navy-700 text-slate-300">
+                      <tbody className="divide-y divide-bp-700 text-slate-300">
                         {dsuParentsList.map((row) => (
-                          <tr key={row.nodeId} className="hover:bg-navy-700">
+                          <tr key={row.nodeId} className="hover:bg-bp-700">
                             <td className="p-2 font-bold text-slate-400">{row.nodeVal}</td>
-                            <td className="p-2 text-neon-cyan font-bold">{row.pVal}</td>
+                            <td className="p-2 text-accent font-bold">{row.pVal}</td>
                             <td className="p-2">{row.rankVal}</td>
                           </tr>
                         ))}
@@ -1405,16 +1402,16 @@ export default function GraphVisualizer() {
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Shortest Path Distances From Source Node
                   </h4>
-                  <div className="overflow-x-auto border border-navy-600 rounded bg-navy-950 max-h-[200px]">
+                  <div className="overflow-x-auto border border-bp-700 rounded bg-bp-950 max-h-[200px]">
                     <table className="w-full text-[10px] text-left border-collapse font-mono">
-                      <thead className="bg-navy-800 text-neon-cyan border-b border-navy-600 text-[9px] uppercase tracking-wider">
+                      <thead className="bg-bp-800 text-accent border-b border-bp-700 text-[9px] uppercase tracking-wider">
                         <tr>
                           <th className="p-2 font-bold font-sans">Target Node</th>
                           <th className="p-2 font-bold font-sans">Computed Distance</th>
                           <th className="p-2 font-bold font-sans">Predecessor Node</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-navy-700">
+                      <tbody className="divide-y divide-bp-700">
                         {[...nodesList]
                           .sort((a, b) => a.id - b.id)
                           .map((n) => {
@@ -1434,9 +1431,9 @@ export default function GraphVisualizer() {
                             }
 
                             return (
-                              <tr key={n.id} className="hover:bg-navy-700">
+                              <tr key={n.id} className="hover:bg-bp-700">
                                 <td className="p-2 font-bold text-slate-300">Node {n.label}</td>
-                                <td className={`p-2 font-bold ${dist === Infinity ? "text-slate-500" : "text-neon-cyan"}`}>
+                                <td className={`p-2 font-bold ${dist === Infinity ? "text-slate-500" : "text-accent"}`}>
                                   {distStr}
                                 </td>
                                 <td className="p-2 text-slate-400">{prevLabel}</td>
@@ -1453,10 +1450,10 @@ export default function GraphVisualizer() {
         )}
 
         {/* Live Execution Logs panel */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl flex flex-col h-[180px] overflow-hidden shadow-md flex-shrink-0">
-          <div className="bg-navy-900 border-b border-navy-600 px-4 py-2 flex justify-between items-center">
+        <div className="bg-bp-800 border border-bp-700 rounded-lg flex flex-col h-[180px] overflow-hidden shadow-sm flex-shrink-0">
+          <div className="bg-bp-900 border-b border-bp-700 px-4 py-2 flex justify-between items-center">
             <h3 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-              <Terminal size={13} className="text-neon-cyan" /> Live Graph Execution Log
+              <Terminal size={13} className="text-accent" /> Live Graph Execution Log
             </h3>
             <button
               onClick={clearLog}
@@ -1468,7 +1465,7 @@ export default function GraphVisualizer() {
 
           <div
             ref={logContainerRef}
-            className="flex-grow bg-navy-900 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 text-slate-300"
+            className="flex-grow bg-bp-900 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 text-slate-300"
           >
             {executionLogs.map((log, index) => {
               let textClass = "text-slate-400";
@@ -1491,7 +1488,7 @@ export default function GraphVisualizer() {
       {/* Edge Weight modal overlay */}
       {isWeightModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-navy-800 border border-navy-600 rounded-2xl p-6 w-[280px] flex flex-col gap-4 shadow-xl">
+          <div className="bg-bp-800 border border-bp-700 rounded-lg p-6 w-[280px] flex flex-col gap-4 shadow-xl">
             <h3 className="font-bold text-slate-200 text-sm">Enter Edge Weight</h3>
             <p className="text-slate-400 text-xs leading-relaxed font-sans">
               Specify path cost (1 to 99):
@@ -1502,7 +1499,7 @@ export default function GraphVisualizer() {
               max="99"
               value={weightInputValue}
               onChange={(e) => setWeightInputValue(e.target.value)}
-              className="w-full bg-navy-950 border border-navy-600 rounded-lg text-slate-100 text-xs px-3 py-2 outline-none text-center"
+              className="w-full bg-bp-950 border border-bp-700 rounded-lg text-slate-100 text-xs px-3 py-2 outline-none text-center"
               onKeyDown={(e) => {
                 if (e.key === "Enter") addEdgeWeightConfirm();
                 if (e.key === "Escape") addEdgeWeightCancel();
@@ -1512,13 +1509,13 @@ export default function GraphVisualizer() {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={addEdgeWeightCancel}
-                className="px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-navy-700 rounded-lg cursor-pointer transition duration-150 font-sans"
+                className="px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 hover:bg-bp-700 rounded-lg cursor-pointer transition duration-150 font-sans"
               >
                 Cancel
               </button>
               <button
                 onClick={addEdgeWeightConfirm}
-                className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-lg cursor-pointer transition duration-150 font-sans"
+                className="px-3 py-2 bg-accent-emphasis hover:bg-accent-emphasis text-white font-bold text-xs rounded-lg cursor-pointer transition duration-150 font-sans"
               >
                 Add Edge
               </button>

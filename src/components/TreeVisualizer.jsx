@@ -141,20 +141,24 @@ export default function TreeVisualizer() {
   const drawTree = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-    const { width, height } = canvasSizeRef.current;
+    const rect = parent.getBoundingClientRect();
+    const w = Math.max(rect.width - 2, 400);
+    const h = 320;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvasSizeRef.current = { width: w, height: h };
     const z = cameraRef.current.zoom || 1;
     const s = dimensionScale;
 
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
     // Clear in screen space (reset transform first)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, w, h);
 
     ctx.save();
     ctx.scale(dpr, dpr);
@@ -166,11 +170,11 @@ export default function TreeVisualizer() {
     const gridSize = 40;
     const startX = Math.floor(-cameraRef.current.x / z / gridSize) * gridSize;
     const startY = Math.floor(-cameraRef.current.y / z / gridSize) * gridSize;
-    const endX = (-cameraRef.current.x) / z + width / z + gridSize;
-    const endY = (-cameraRef.current.y) / z + height / z + gridSize;
+    const endX = (-cameraRef.current.x) / z + w / z + gridSize;
+    const endY = (-cameraRef.current.y) / z + h / z + gridSize;
 
-    ctx.strokeStyle = "#303030";
-    ctx.lineWidth = 0.4;
+    ctx.strokeStyle = "#30363d";
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
     for (let x = startX; x < endX; x += gridSize) {
       ctx.moveTo(x, startY);
@@ -185,8 +189,8 @@ export default function TreeVisualizer() {
     const { nodes, edges } = bstRef.current.getFlatNodesAndEdges();
 
     // Draw Edges
-    ctx.strokeStyle = "#555555";
-    ctx.lineWidth = 2.2 * s;
+    ctx.strokeStyle = "#484f58";
+    ctx.lineWidth = 2.5 * s;
     for (const edge of edges) {
       ctx.beginPath();
       ctx.moveTo(edge.source.x, edge.source.y);
@@ -194,69 +198,92 @@ export default function TreeVisualizer() {
       ctx.stroke();
     }
 
-    // Draw Nodes
+    // Build set of node IDs currently in the queue (for BFS purple state)
+    const queuedNodeIds = new Set();
+    if (liveQueueList.length > 0) {
+      for (const n of nodes) {
+        if (liveQueueList.includes(n.value)) queuedNodeIds.add(n.id);
+      }
+    }
+
+    // Draw Nodes — solid fill, state-driven colors
     for (const node of nodes) {
       const isCurrentlyActive = node.id === activeNodeId;
       const isHighlighted = highlightedNodeIds.has(node.id);
+      const isQueued = queuedNodeIds.has(node.id) && !isCurrentlyActive && !isHighlighted;
 
-      let fill = "#10b981"; // Emerald for normal
-      let border = "#047857";
-      let stateLabel = null;
+      // State-driven palette
+      let fill, border, textColor, glowColor;
 
       if (isCurrentlyActive) {
-        fill = "#f59e0b"; // Orange active
-        border = "#b45309";
-        ctx.shadowColor = "#f59e0b";
-        ctx.shadowBlur = 12 * s;
-        stateLabel = "Current";
+        fill = "#06B6D4"; border = "#67E8F9"; textColor = "#ffffff"; glowColor = "#06B6D4";
       } else if (isHighlighted) {
-        fill = "#8b5cf6"; // Purple special
-        border = "#6d28d9";
-        ctx.shadowColor = "#8b5cf6";
-        ctx.shadowBlur = 12 * s;
-        stateLabel = "Found";
+        fill = "#22C55E"; border = "#86EFAC"; textColor = "#ffffff"; glowColor = "#22C55E";
+      } else if (isQueued) {
+        fill = "#8B5CF6"; border = "#C4B5FD"; textColor = "#ffffff"; glowColor = "#8B5CF6";
+      } else {
+        fill = "#6B7280"; border = "#9CA3AF"; textColor = "#ffffff"; glowColor = null;
       }
 
-      const outerR = 22 * s;
-      const innerR = 19 * s;
+      const r = 20 * s;
 
-      ctx.fillStyle = border;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, outerR, 0, 2 * Math.PI);
-      ctx.fill();
+      // Reset shadow state before each node
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
 
-      ctx.shadowBlur = 0; // Reset
+      // Glow for active states
+      if (glowColor) {
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 12 * s;
+      }
 
+      // Solid filled circle
       ctx.fillStyle = fill;
       ctx.beginPath();
-      ctx.arc(node.x, node.y, innerR, 0, 2 * Math.PI);
+      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
       ctx.fill();
 
-      // Node state label (Item 12)
+      // Reset shadow before border
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+
+      // Subtle border
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 2 * s;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // State label badge above node
+      let stateLabel = null;
+      if (isCurrentlyActive) stateLabel = "Current";
+      else if (isHighlighted) stateLabel = "Visited";
+      else if (isQueued) stateLabel = "In Queue";
+
       if (stateLabel) {
         const labelFontPx = 9 * s;
         ctx.font = `bold ${labelFontPx}px sans-serif`;
         const labelW = ctx.measureText(stateLabel).width;
         const labelX = node.x;
-        const labelY = node.y - 30 * s;
+        const labelY = node.y - 28 * s;
 
-        ctx.fillStyle = "rgba(10, 10, 10, 0.85)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.beginPath();
-        ctx.roundRect(labelX - labelW / 2 - 5 * s, labelY - 6 * s, labelW + 10 * s, 13 * s, 4 * s);
+        ctx.roundRect(labelX - labelW / 2 - 4 * s, labelY - 6 * s, labelW + 8 * s, 13 * s, 3 * s);
         ctx.fill();
 
-        ctx.fillStyle = fill;
+        ctx.fillStyle = border;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(stateLabel, labelX, labelY);
       }
 
-      // Label
-      ctx.fillStyle = "#FFFFFF";
+      // Node value label
+      ctx.fillStyle = textColor;
       ctx.font = `bold ${13 * s}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(node.label, node.x, node.y - 1);
+      ctx.fillText(node.label, node.x, node.y);
     }
 
     ctx.restore();
@@ -573,7 +600,7 @@ export default function TreeVisualizer() {
 
   useEffect(() => {
     drawTree();
-  }, [nodesList, activeNodeId, highlightedNodeIds, dimensionScale]);
+  }, [nodesList, activeNodeId, highlightedNodeIds, dimensionScale, liveQueueList]);
 
   useEffect(() => {
     try {
@@ -582,17 +609,13 @@ export default function TreeVisualizer() {
   }, [dimensionScale]);
 
   useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const parentWidth = rect.width || 800;
-      canvasSizeRef.current = { width: parentWidth, height: 320 };
-      drawTree();
+    drawTree();
+    const onResize = () => drawTree();
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      clearRunningInterval();
     };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -665,22 +688,23 @@ export default function TreeVisualizer() {
   const progressPercent = totalStepsCount > 0 ? (currentStepIdx / totalStepsCount) * 100 : 0;
 
   const activeLegendStates = (() => {
-    if (!isRunning) return new Set(["normal", "current", "found"]);
-    const active = new Set(["normal"]);
+    if (!isRunning) return new Set(["unvisited", "current", "visited"]);
+    const active = new Set(["unvisited"]);
     if (activeNodeId !== null) active.add("current");
-    if (highlightedNodeIds.size > 0) active.add("found");
+    if (highlightedNodeIds.size > 0) active.add("visited");
+    if (liveQueueList.length > 0) active.add("queued");
     return active;
   })();
 
   return (
-    <div className="bg-navy-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
+    <div className="bg-bp-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
       {/* Sidebar Panel */}
       <aside className="w-full lg:w-[300px] xl:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1 min-w-0">
         
         {/* BST Key Controls Card */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-            <Database size={13} className="text-neon-cyan" />
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-800 pb-2 flex items-center gap-1.5">
+            <Database size={13} className="text-accent" />
             BST Operations
           </h2>
           <div className="flex gap-2">
@@ -689,25 +713,25 @@ export default function TreeVisualizer() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Enter node value"
-              className="w-full bg-navy-950 border border-navy-600 rounded-lg text-slate-100 text-xs px-3 py-2 outline-none text-center"
+              className="w-full bg-bp-950 border border-bp-700 rounded-md text-slate-200 text-xs px-3 py-2 outline-none text-center"
             />
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             <button
               onClick={() => handleBSTAction("insert")}
-              className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-600/30 font-bold text-[10px] py-2 rounded-lg cursor-pointer transition duration-200"
+              className="bg-[#3fb950]/10 hover:bg-[#3fb950]/20 text-[#3fb950] border border-[#3fb950]/20 font-bold text-[10px] py-2 rounded-md cursor-pointer transition duration-200"
             >
               Insert
             </button>
             <button
               onClick={() => handleBSTAction("search")}
-              className="bg-cyan-600/20 hover:bg-cyan-600/30 text-neon-cyan border border-cyan-600/30 font-bold text-[10px] py-2 rounded-lg cursor-pointer transition duration-200"
+              className="bg-accent-muted hover:bg-[#1f6feb]/20 text-accent border border-accent/20 font-bold text-[10px] py-2 rounded-md cursor-pointer transition duration-200"
             >
               Search
             </button>
             <button
               onClick={() => handleBSTAction("delete")}
-              className="bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-600/30 font-bold text-[10px] py-2 rounded-lg cursor-pointer transition duration-200"
+              className="bg-[#f85149]/10 hover:bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/20 font-bold text-[10px] py-2 rounded-md cursor-pointer transition duration-200"
             >
               Delete
             </button>
@@ -715,9 +739,9 @@ export default function TreeVisualizer() {
         </div>
 
         {/* Tree Editor Panel */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-            <Activity size={13} className="text-neon-cyan" />
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-800 pb-2 flex items-center gap-1.5">
+            <Activity size={13} className="text-accent" />
             Tree Editor
           </h2>
           <div className="flex items-center justify-between gap-4">
@@ -729,13 +753,13 @@ export default function TreeVisualizer() {
               value={nodeCountSetting}
               onChange={(e) => setNodeCountSetting(e.target.value)}
               disabled={isRunning}
-              className="w-16 bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-2 py-1 text-center outline-none"
+              className="w-16 bg-bp-950 border border-bp-700 rounded-md text-slate-200 text-xs px-2 py-1 text-center outline-none"
             />
           </div>
           <button
             onClick={generateRandomTree}
             disabled={isRunning}
-            className="w-full flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-accent-emphasis hover:bg-[#1f6feb]/90 text-white font-bold text-xs py-2 px-4 rounded-md cursor-pointer transition duration-200"
           >
             <Shuffle size={12} />
             Random Tree
@@ -744,14 +768,14 @@ export default function TreeVisualizer() {
             <button
               onClick={generatePrefilledTree}
               disabled={isRunning}
-              className="flex items-center justify-center gap-1.5 bg-zinc-700 hover:bg-zinc-600 text-slate-200 font-bold text-[10px] py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              className="flex items-center justify-center gap-1.5 bg-bp-800 hover:bg-bp-750 text-slate-200 font-bold text-[10px] py-2 px-2 rounded-md cursor-pointer transition duration-200 border border-bp-700"
             >
               Prefilled Tree
             </button>
             <button
               onClick={clearTree}
               disabled={isRunning}
-              className="flex items-center justify-center gap-1.5 bg-rose-950/20 hover:bg-rose-950/30 text-rose-400 border border-rose-900/30 font-bold text-[10px] py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              className="flex items-center justify-center gap-1.5 bg-[#f85149]/10 hover:bg-[#f85149]/20 text-[#f85149] border border-[#f85149]/20 font-bold text-[10px] py-2 px-2 rounded-md cursor-pointer transition duration-200"
             >
               <Trash2 size={11} />
               Clear Tree
@@ -760,15 +784,15 @@ export default function TreeVisualizer() {
         </div>
 
         {/* Tree Algorithms Selection */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-            <Sparkles size={13} className="text-neon-cyan" />
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-800 pb-2 flex items-center gap-1.5">
+            <Sparkles size={13} className="text-accent" />
             Tree Algorithm
           </h2>
           <select
             value={activeAlgorithm}
             onChange={(e) => setActiveAlgorithm(e.target.value)}
-            className="bg-navy-950 border border-navy-600 rounded-lg text-slate-200 text-xs px-3 py-2 cursor-pointer outline-none"
+            className="bg-bp-950 border border-bp-700 rounded-md text-slate-200 text-xs px-3 py-2 cursor-pointer outline-none"
           >
             <option value="traversals">DFS Traversals (In/Pre/Post)</option>
             <option value="bfs">BFS / Level-Order</option>
@@ -786,9 +810,9 @@ export default function TreeVisualizer() {
                   <button
                     key={mode}
                     onClick={() => setTraversalType(mode)}
-                    className={`text-[9px] py-1.5 font-bold rounded capitalize cursor-pointer border transition-all duration-200 ${
+                    className={`text-[9px] py-1.5 font-bold rounded-md capitalize cursor-pointer border transition-all duration-200 ${
                       traversalType === mode
-                        ? "bg-cyan-500/10 border-cyan-500/30 text-neon-cyan"
+                        ? "bg-accent-muted border-accent/30 text-accent"
                         : "border-transparent text-slate-400 hover:text-slate-300"
                     }`}
                   >
@@ -806,7 +830,7 @@ export default function TreeVisualizer() {
                 <select
                   value={lcaNodeAP}
                   onChange={(e) => setLcaNodeAP(e.target.value)}
-                  className="bg-navy-950 border border-navy-600 rounded text-slate-300 text-xs p-1.5"
+                  className="bg-bp-950 border border-bp-700 rounded text-slate-300 text-xs p-1.5"
                 >
                   {nodesList.map((n) => (
                     <option key={n.id} value={n.value}>
@@ -820,7 +844,7 @@ export default function TreeVisualizer() {
                 <select
                   value={lcaNodeAQ}
                   onChange={(e) => setLcaNodeAQ(e.target.value)}
-                  className="bg-navy-950 border border-navy-600 rounded text-slate-300 text-xs p-1.5"
+                  className="bg-bp-950 border border-bp-700 rounded text-slate-300 text-xs p-1.5"
                 >
                   {nodesList.map((n) => (
                     <option key={n.id} value={n.value}>
@@ -839,14 +863,14 @@ export default function TreeVisualizer() {
                 type="number"
                 value={targetSumValue}
                 onChange={(e) => setTargetSumValue(e.target.value)}
-                className="bg-navy-950 border border-navy-600 rounded text-slate-300 text-xs p-1.5 text-center"
+                className="bg-bp-950 border border-bp-700 rounded text-slate-300 text-xs p-1.5 text-center"
               />
             </div>
           )}
 
           <button
             onClick={runTreeAlgorithm}
-            className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-4 rounded-lg cursor-pointer mt-1 transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-[#3fb950] hover:bg-[#3fb950]/90 text-white font-bold text-xs py-2.5 px-4 rounded-md cursor-pointer mt-1 transition duration-200 border border-[#3fb950]/20"
           >
             <Play size={12} />
             Run Visualization
@@ -854,7 +878,7 @@ export default function TreeVisualizer() {
         </div>
 
         {/* Speed Controls Slider */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Playback speed</label>
           <input
             type="range"
@@ -863,24 +887,24 @@ export default function TreeVisualizer() {
             step="50"
             value={speedMs}
             onChange={(e) => setSpeedMs(parseInt(e.target.value, 10))}
-            className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
+            className="w-full h-1 bg-bp-800 rounded appearance-none cursor-pointer accent-accent"
           />
           <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
             <span className="flex items-center gap-1"><Zap size={11} /> Fast</span>
-            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 rounded text-neon-cyan">{getSpeedLabel(speedMs)} · {speedMs}ms</span>
+            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 rounded text-accent">{getSpeedLabel(speedMs)} · {speedMs}ms</span>
             <span className="flex items-center gap-1"><Timer size={11} /> Slow</span>
           </div>
         </div>
 
         {/* Display Size Controls */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Node &amp; label size</label>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
               disabled={dimensionScale <= DIM_MIN + 1e-6}
               title="Decrease size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-800 hover:bg-bp-750 disabled:opacity-30 disabled:hover:bg-bp-800 text-slate-200 cursor-pointer transition duration-200 rounded-md border border-bp-700"
             >
               <Minus size={13} />
             </button>
@@ -891,93 +915,84 @@ export default function TreeVisualizer() {
               step={DIM_STEP * 100}
               value={dimensionScale * 100}
               onChange={(e) => setDimensionScale(clampDim(parseInt(e.target.value, 10) / 100))}
-              className="flex-1 h-1 bg-navy-700 appearance-none cursor-pointer accent-cyan-500"
+              className="flex-1 h-1 bg-bp-800 appearance-none cursor-pointer accent-accent"
             />
             <button
               onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
               disabled={dimensionScale >= DIM_MAX - 1e-6}
               title="Increase size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-navy-700 hover:bg-navy-600 disabled:opacity-30 disabled:hover:bg-navy-700 text-slate-200 cursor-pointer transition duration-200"
+              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-800 hover:bg-bp-750 disabled:opacity-30 disabled:hover:bg-bp-800 text-slate-200 cursor-pointer transition duration-200 rounded-md border border-bp-700"
             >
               <Plus size={13} />
             </button>
-          </div>
-          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-            <span>Small</span>
-            <span className="bg-navy-950 border border-navy-600 px-2 py-0.5 text-neon-cyan tabular-nums">{formatDim(dimensionScale)}</span>
-            <span>Large</span>
+            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 rounded text-accent tabular-nums text-[10px] font-bold">{formatDim(dimensionScale)}</span>
           </div>
         </div>
 
-        {/* Playback Controls Panel */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md mb-2">
-          <div className="grid grid-cols-3 gap-2">
+        {/* Playback Progress Slider */}
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm mb-2">
+          <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase flex items-center justify-between">
+            <span>Progress</span>
+            <span className="text-accent font-mono text-[9px]">{currentStepIdx}/{totalStepsCount}</span>
+          </label>
+          <div className="flex items-center gap-2">
             <button
               onClick={stepBackward}
-              disabled={!isRunning || currentStepIdx <= 1}
-              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              disabled={currentStepIdx <= 1}
+              className="flex items-center justify-center bg-bp-800 hover:bg-bp-750 disabled:opacity-30 text-slate-300 font-bold text-xs p-2 rounded-md cursor-pointer transition duration-200 border border-bp-700"
             >
-              <ChevronLeft size={12} />
-              Back
+              <ChevronLeft size={14} />
             </button>
             <button
               onClick={togglePlayPause}
-              disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              className="flex-1 flex items-center justify-center gap-1 bg-accent-emphasis hover:bg-[#1f6feb]/95 text-white font-bold text-xs py-2 px-2 rounded-md cursor-pointer transition duration-200 border border-accent-emphasis"
             >
-              {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-              {isPlaying ? "Pause" : "Play"}
+              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+              <span>{isPlaying ? "Pause" : "Play"}</span>
             </button>
             <button
               onClick={stepForward}
-              disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1 bg-navy-700 hover:bg-navy-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
+              disabled={currentStepIdx >= totalStepsCount}
+              className="flex items-center justify-center bg-bp-800 hover:bg-bp-750 disabled:opacity-30 text-slate-300 font-bold text-xs p-2 rounded-md cursor-pointer transition duration-200 border border-bp-700"
             >
-              Next
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </button>
           </div>
-
-          {/* Step scrubber (Item 9) */}
-          {isRunning && totalStepsCount > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <input
-                type="range"
-                min="0"
-                max={totalStepsCount - 1}
-                value={Math.max(0, currentStepIdx - 1)}
-                onChange={(e) => seekToStep(parseInt(e.target.value, 10))}
-                className="w-full h-1 bg-navy-700 rounded appearance-none cursor-pointer accent-cyan-500"
-              />
-              <div className="text-center text-[9px] font-bold text-slate-500">
-                Step {currentStepIdx} / {totalStepsCount}
-              </div>
-            </div>
-          )}
-
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min="0"
+              max={totalStepsCount}
+              value={currentStepIdx}
+              onChange={(e) => seekToStep(parseInt(e.target.value, 10))}
+              className="w-full h-1 bg-bp-800 rounded appearance-none cursor-pointer accent-accent"
+            />
+          </div>
           <button
             onClick={resetVisualStates}
-            className="w-full flex items-center justify-center gap-1.5 bg-rose-600/10 border border-rose-600/30 hover:bg-rose-600/20 text-rose-400 font-bold text-xs py-2 px-4 rounded-lg cursor-pointer transition duration-200"
+            className="w-full flex items-center justify-center gap-1.5 bg-[#f85149]/10 border border-[#f85149]/30 hover:bg-[#f85149]/20 text-[#f85149] font-bold text-xs py-2 px-4 rounded-md cursor-pointer transition duration-200"
           >
             <RotateCcw size={12} />
-            Reset State
+            Clear Visualization
           </button>
         </div>
+
         {/* Legend */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-2.5 shadow-md flex-shrink-0 mb-2">
-          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2">
+        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-2.5 shadow-sm flex-shrink-0 mb-2">
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-800 pb-2">
             Legend
           </h2>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             {[
-              { state: "normal", label: "Normal", color: "bg-emerald-500", shadow: "rgba(16,185,129,0.4)" },
-              { state: "current", label: "Current Node", color: "bg-amber-500", shadow: "rgba(245,158,11,0.4)" },
-              { state: "found", label: "Found/Visited", color: "bg-purple-500", shadow: "rgba(139,92,246,0.4)" },
-            ].map(({ state, label, color, shadow }) => {
+              { state: "unvisited", label: "Unvisited", color: "bg-[#6B7280] border border-[#9CA3AF]" },
+              { state: "queued", label: "In Queue/Stack", color: "bg-[#8B5CF6] border border-[#C4B5FD]" },
+              { state: "current", label: "Current", color: "bg-[#06B6D4] border border-[#67E8F9]" },
+              { state: "visited", label: "Visited", color: "bg-[#22C55E] border border-[#86EFAC]" },
+            ].map(({ state, label, color }) => {
               const isActive = activeLegendStates.has(state);
               return (
                 <div key={state} className={`flex items-center gap-2 transition-opacity duration-300 ${isActive ? "opacity-100" : "opacity-25"}`}>
-                  <span className={`w-2.5 h-2.5 rounded-full ${color} ${isActive ? `shadow-[0_0_6px_${shadow}]` : ""}`} />
+                  <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
                   <span className="text-slate-400 font-medium">{label}</span>
                 </div>
               );
@@ -991,12 +1006,12 @@ export default function TreeVisualizer() {
         {/* Canvas + Code Panel row */}
         <div className="flex flex-col lg:flex-row gap-4 min-w-0">
           {/* Canvas panel */}
-          <div className="bg-surface-overlay border border-navy-600 rounded-2xl relative overflow-hidden shadow-inner flex flex-col justify-center items-center p-4 min-h-[300px] flex-1 min-w-0">
+          <div className="bg-bp-900 border border-bp-800 rounded-lg relative overflow-hidden shadow-inner flex flex-col justify-center items-center p-4 min-h-[300px] flex-1 min-w-0">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
-            <div className="absolute top-0 left-0 right-0 h-1 bg-navy-600 z-20">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-bp-800 z-20">
               <div
-                className="h-full bg-cyan-500 rounded-r transition-all duration-300 ease-out"
+                className="h-full bg-accent rounded-r transition-all duration-300 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -1014,23 +1029,23 @@ export default function TreeVisualizer() {
 
           {/* Canvas toolbar */}
           <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
-            <div className="flex items-center bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg overflow-hidden">
+            <div className="flex items-center bg-bp-950/80 backdrop-blur-sm border border-bp-800 rounded-md overflow-hidden">
               <button
                 onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
                 disabled={dimensionScale <= DIM_MIN + 1e-6}
                 title="Decrease node size"
-                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+                className="p-1.5 text-slate-400 hover:text-accent hover:bg-bp-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
               >
                 <Minus size={12} />
               </button>
-              <span className="px-1.5 text-[10px] font-bold text-neon-cyan tabular-nums min-w-[34px] text-center">
+              <span className="px-1.5 text-[10px] font-bold text-accent tabular-nums min-w-[34px] text-center">
                 {formatDim(dimensionScale)}
               </span>
               <button
                 onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
                 disabled={dimensionScale >= DIM_MAX - 1e-6}
                 title="Increase node size"
-                className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-navy-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
+                className="p-1.5 text-slate-400 hover:text-accent hover:bg-bp-800/60 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent cursor-pointer transition-all duration-200"
               >
                 <Plus size={12} />
               </button>
@@ -1038,15 +1053,15 @@ export default function TreeVisualizer() {
             <button
               onClick={captureScreenshot}
               title="Save screenshot"
-              className="p-1.5 bg-navy-950/80 backdrop-blur-sm border border-navy-600 rounded-lg text-slate-400 hover:text-neon-cyan hover:border-cyan-500/30 cursor-pointer transition-all duration-200"
+              className="p-1.5 bg-bp-950/80 backdrop-blur-sm border border-bp-800 rounded-md text-slate-400 hover:text-accent hover:border-accent/30 cursor-pointer transition-all duration-200"
             >
               <Camera size={14} />
             </button>
             <button
               onClick={() => setShowHelpOverlay(!showHelpOverlay)}
               title="Canvas help"
-              className={`p-1.5 bg-navy-950/80 backdrop-blur-sm border rounded-lg cursor-pointer transition-all duration-200 ${
-                showHelpOverlay ? "border-cyan-500/30 text-neon-cyan" : "border-navy-600 text-slate-400 hover:text-neon-cyan hover:border-cyan-500/30"
+              className={`p-1.5 bg-bp-950/80 backdrop-blur-sm border rounded-md cursor-pointer transition-all duration-200 ${
+                showHelpOverlay ? "border-accent/30 text-accent" : "border-bp-800 text-slate-400 hover:text-accent hover:border-accent/30"
               }`}
             >
               <HelpCircle size={14} />
@@ -1055,7 +1070,7 @@ export default function TreeVisualizer() {
 
           {/* Top Status Banner */}
           {isRunning && (
-            <div className="absolute top-6 left-4 right-4 bg-navy-950/90 backdrop-blur-md border border-navy-600 rounded-xl p-3 shadow-md pointer-events-none z-10">
+            <div className="absolute top-6 left-4 right-4 bg-bp-950/90 backdrop-blur-md border border-bp-800 rounded-md p-3 shadow-sm pointer-events-none z-10">
               <span className="text-xs font-bold text-amber-400 leading-relaxed block text-center">
                 {statusBannerText}
               </span>
@@ -1064,17 +1079,17 @@ export default function TreeVisualizer() {
 
           {/* Empty state + Help overlay (Items 5 + 10) */}
           {(nodesList.length === 0 || showHelpOverlay) && (
-            <div className="absolute inset-0 bg-navy-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10 pointer-events-none">
+            <div className="absolute inset-0 bg-bp-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-10 pointer-events-none">
               <div className="flex items-center gap-3 animate-gentle-pulse">
-                <TreePine size={18} className="text-emerald-400" />
+                <TreePine size={18} className="text-[#3fb950]" />
                 <p className="text-sm font-semibold text-slate-300">
                   {nodesList.length === 0 ? "BST is currently empty" : "Tree Interactions"}
                 </p>
               </div>
               <div className="flex flex-col gap-2 text-xs text-slate-400 mt-2">
-                <p className="animate-gentle-pulse">• <strong className="text-emerald-400">Insert</strong> — Enter a number and click Insert</p>
-                <p className="animate-gentle-pulse" style={{ animationDelay: "0.15s" }}>• <strong className="text-neon-cyan">Search</strong> — Enter a value to find in the BST</p>
-                <p className="animate-gentle-pulse" style={{ animationDelay: "0.3s" }}>• <strong className="text-rose-400">Delete</strong> — Remove a node by value, or right-click a node</p>
+                <p className="animate-gentle-pulse">• <strong className="text-[#3fb950]">Insert</strong> — Enter a number and click Insert</p>
+                <p className="animate-gentle-pulse" style={{ animationDelay: "0.15s" }}>• <strong className="text-accent">Search</strong> — Enter a value to find in the BST</p>
+                <p className="animate-gentle-pulse" style={{ animationDelay: "0.3s" }}>• <strong className="text-[#f85149]">Delete</strong> — Remove a node by value, or right-click a node</p>
                 <p className="animate-gentle-pulse" style={{ animationDelay: "0.45s" }}>• <strong className="text-slate-300">Drag a node</strong> — Reposition it on the canvas</p>
                 <p className="animate-gentle-pulse" style={{ animationDelay: "0.6s" }}>• <strong className="text-slate-400">Middle-click / Scroll</strong> — Pan · zoom the canvas</p>
               </div>
@@ -1114,19 +1129,19 @@ export default function TreeVisualizer() {
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
-        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-navy-800/50 border border-navy-600/50 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
-          <span><kbd className="bg-navy-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">Scroll</kbd> Zoom</span>
+        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-bp-900 border border-bp-800 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
+          <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
+          <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
+          <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
+          <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">MMB</kbd> Pan</span>
+          <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">Scroll</kbd> Zoom</span>
         </div>
 
         {/* Dedicated Space for Tables and Results */}
         {(activeAlgorithm === "height" || activeAlgorithm === "lifting" || activeAlgorithm === "traversals" || activeAlgorithm === "bfs") && (
-          <div className="bg-navy-800 border border-navy-600 rounded-xl p-4 flex flex-col gap-3 shadow-md">
-            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-navy-600 pb-2 flex items-center gap-1.5">
-              <Table size={14} className="text-neon-cyan" />
+          <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-800 pb-2 flex items-center gap-1.5">
+              <Table size={14} className="text-accent" />
               Algorithm Results & Analytics
             </h3>
             
@@ -1134,17 +1149,17 @@ export default function TreeVisualizer() {
               
               {/* Traversal / Queue Output */}
               {(activeAlgorithm === "traversals" || activeAlgorithm === "bfs") && (
-                <div className="bg-navy-900 border border-navy-600 p-3 rounded-lg flex flex-col gap-2">
+                <div className="bg-bp-900 border border-bp-700 p-3 rounded-lg flex flex-col gap-2">
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     {activeAlgorithm === "bfs" ? "BFS Live Queue Front-to-Back" : `${traversalType} Traversal Output`}
                   </h4>
                   <div className="font-mono text-xs text-slate-200">
                     {activeAlgorithm === "bfs" ? (
-                      <div className="bg-navy-950 border border-navy-600 p-2.5 rounded text-neon-cyan font-bold text-center">
+                      <div className="bg-bp-950 border border-bp-700 p-2.5 rounded text-accent font-bold text-center">
                         {liveQueueList.length > 0 ? liveQueueList.join(" | ") : "Queue is empty"}
                       </div>
                     ) : (
-                      <div className="bg-navy-950 border border-navy-600 p-2.5 rounded text-emerald-400 font-bold text-center">
+                      <div className="bg-bp-950 border border-bp-700 p-2.5 rounded text-[#3fb950] font-bold text-center">
                         {visitedOutputList.length > 0 ? visitedOutputList.join(" → ") : "No traversal yet"}
                       </div>
                     )}
@@ -1154,18 +1169,18 @@ export default function TreeVisualizer() {
 
               {/* Height and Diameter Table */}
               {activeAlgorithm === "height" && (
-                <div className="bg-navy-900 border border-navy-600 p-3 rounded-lg flex flex-col gap-2 col-span-2">
-                  <div className="flex justify-between items-center border-b border-navy-600 pb-2 mb-1">
+                <div className="bg-bp-900 border border-bp-700 p-3 rounded-lg flex flex-col gap-2 col-span-2">
+                  <div className="flex justify-between items-center border-b border-bp-700 pb-2 mb-1">
                     <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Height Metric Analytics</h4>
                     <div className="text-[10px] text-slate-300">
-                      Max Overall Diameter: <span className="text-neon-cyan font-bold">{diameterResult} edges</span>
+                      Max Overall Diameter: <span className="text-accent font-bold">{diameterResult} edges</span>
                     </div>
                   </div>
                   <div className="max-h-[160px] overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 font-mono text-[10px]">
                     {[...nodesList].map((n) => (
-                      <div key={n.id} className="bg-navy-950 border border-navy-600 rounded p-2 flex justify-between items-center">
+                      <div key={n.id} className="bg-bp-950 border border-bp-700 rounded p-2 flex justify-between items-center">
                         <span className="text-slate-400">Node {n.value}:</span>
-                        <span className="text-emerald-400 font-bold">{heightsList.get(n.id) || 0}</span>
+                        <span className="text-[#3fb950] font-bold">{heightsList.get(n.id) || 0}</span>
                       </div>
                     ))}
                   </div>
@@ -1174,13 +1189,13 @@ export default function TreeVisualizer() {
 
               {/* Binary Lifting Table */}
               {activeAlgorithm === "lifting" && liftingDataList.length > 0 && (
-                <div className="bg-navy-900 border border-navy-600 p-3 rounded-lg flex flex-col gap-2 col-span-2">
+                <div className="bg-bp-900 border border-bp-700 p-3 rounded-lg flex flex-col gap-2 col-span-2">
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Lifting Ancestors Jump Table (up[node_id][i] where power = 2^i)
                   </h4>
-                  <div className="overflow-x-auto border border-navy-600 rounded bg-navy-950">
+                  <div className="overflow-x-auto border border-bp-700 rounded bg-bp-950">
                     <table className="w-full text-[10px] text-center border-collapse font-mono">
-                      <thead className="bg-navy-800 text-neon-cyan border-b border-navy-600 text-[8px] uppercase">
+                      <thead className="bg-bp-800 text-accent border-b border-bp-700 text-[8px] uppercase">
                         <tr>
                           <th className="p-2 text-left font-sans pl-3">Node Value</th>
                           <th className="p-2">2^0 Ancestor</th>
@@ -1189,9 +1204,9 @@ export default function TreeVisualizer() {
                           <th className="p-2">2^3 Ancestor</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-navy-700 text-slate-300">
+                      <tbody className="divide-y divide-bp-700 text-slate-300">
                         {liftingDataList.map((row) => (
-                          <tr key={row.nodeId} className="hover:bg-navy-700">
+                          <tr key={row.nodeId} className="hover:bg-bp-800">
                             <td className="p-2 text-left pl-3 font-bold text-slate-400">{row.nodeVal}</td>
                             <td className="p-2">{row.up[0]}</td>
                             <td className="p-2">{row.up[1]}</td>
@@ -1209,10 +1224,10 @@ export default function TreeVisualizer() {
         )}
 
         {/* Monospace Log */}
-        <div className="bg-navy-800 border border-navy-600 rounded-xl flex flex-col h-[180px] overflow-hidden shadow-md flex-shrink-0">
-          <div className="bg-navy-900 border-b border-navy-600 px-4 py-2 flex justify-between items-center">
+        <div className="bg-bp-900 border border-bp-700 rounded-lg flex flex-col h-[180px] overflow-hidden shadow-sm flex-shrink-0">
+          <div className="bg-bp-950 border-b border-bp-700 px-4 py-2 flex justify-between items-center">
             <h3 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-              <Terminal size={13} className="text-neon-cyan" /> Live Tree Execution Log
+              <Terminal size={13} className="text-accent" /> Live Tree Execution Log
             </h3>
             <button
               onClick={clearLog}
@@ -1224,15 +1239,15 @@ export default function TreeVisualizer() {
 
           <div
             ref={logContainerRef}
-            className="flex-grow bg-navy-900 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 text-slate-300"
+            className="flex-grow bg-bp-950 p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 text-slate-300"
           >
             {executionLogs.map((log, index) => {
               let textClass = "text-slate-400";
               if (log.type === "system") textClass = "text-slate-500";
-              if (log.type === "highlight") textClass = "text-amber-400";
-              if (log.type === "success") textClass = "text-emerald-400 font-bold";
-              if (log.type === "error") textClass = "text-rose-500";
-              if (log.type === "path") textClass = "text-rose-400";
+              if (log.type === "highlight") textClass = "text-[#d29922]";
+              if (log.type === "success") textClass = "text-[#3fb950] font-bold";
+              if (log.type === "error") textClass = "text-[#f85149]";
+              if (log.type === "path") textClass = "text-[#f85149]";
 
               return (
                 <div key={index} className={`whitespace-pre-wrap ${textClass}`}>

@@ -18,31 +18,31 @@ export const EdgeState = {
 };
 
 export const Colors = {
-  bg: "#272727",
-  grid: "#3a3a3a",
-  edgeDrag: "rgba(255, 255, 255, 0.4)",
+  bg: "#0d1117",
+  grid: "#30363d",
+  edgeDrag: "rgba(88, 166, 255, 0.4)",
   node: {
-    [NodeState.UNVISITED]: { fill: "#10b981", border: "#047857" },
-    [NodeState.CURRENT]: { fill: "#f59e0b", border: "#b45309" },
-    [NodeState.VISITED]: { fill: "#06b6d4", border: "#0891b2" },
-    [NodeState.IN_PATH]: { fill: "#ef4444", border: "#b91c1c" },
-    [NodeState.SPECIAL]: { fill: "#8b5cf6", border: "#6d28d9" }, // Purple for LCA / BST match
+    [NodeState.UNVISITED]: { fill: "#6B7280", border: "#9CA3AF" },
+    [NodeState.CURRENT]: { fill: "#06B6D4", border: "#67E8F9" },
+    [NodeState.VISITED]: { fill: "#22C55E", border: "#86EFAC" },
+    [NodeState.IN_PATH]: { fill: "#F97316", border: "#FDBA74" },
+    [NodeState.SPECIAL]: { fill: "#EAB308", border: "#FDE047" },
   },
   edge: {
-    [EdgeState.NORMAL]: "#757575",
-    [EdgeState.RELAXED]: "#f59e0b",
-    [EdgeState.IN_PATH]: "#ef4444",
-    [EdgeState.BRIDGE]: "#f43f5e", // Thick red-rose for bridges
+    [EdgeState.NORMAL]: "#30363d",
+    [EdgeState.RELAXED]: "#d29922",
+    [EdgeState.IN_PATH]: "#58a6ff",
+    [EdgeState.BRIDGE]: "#f85149",
   },
   // SCC component colors
   components: [
-    "#ec4899", // pink
-    "#8b5cf6", // purple
-    "#f59e0b", // amber
-    "#3b82f6", // blue
-    "#10b981", // emerald
-    "#06b6d4", // cyan
-    "#ef4444", // red
+    "#58a6ff", // blue
+    "#3fb950", // green
+    "#bc8cff", // purple
+    "#d29922", // amber
+    "#f85149", // red
+    "#535f80", // slate
+    "#6e7681", // grey
   ],
 };
 
