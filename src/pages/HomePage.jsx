@@ -7,12 +7,36 @@ import CodeSnippet from "../components/home/CodeSnippet";
 
 export default function HomePage({ setCurrentPage }) {
   return (
-    <div className="bg-bp-950 min-h-[calc(100vh-130px)] flex flex-col">
-      {/* ── Hero ── */}
-      <section className="relative px-6 py-20 md:py-28 flex flex-col items-center justify-center text-center overflow-hidden border-b border-bp-800">
-        <AnimatedHeroBackground />
+    <div className="home-video-page relative isolate min-h-[calc(100vh-130px)] overflow-hidden bg-bp-950">
+      {/* Fixed decorative video extends behind every HomePage section. */}
+      <video
+        className="hero-video fixed inset-0 z-0 h-screen w-screen object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        <source src="/bg.mp4" type="video/mp4" />
+      </video>
 
-        <div className="relative z-10 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-bp-700 bg-bp-900 mb-6">
+      {/* A persistent scrim keeps all content legible without hiding the motion. */}
+      <div
+        className="fixed inset-0 z-[1] bg-[linear-gradient(120deg,rgba(5,10,18,0.82)_0%,rgba(8,15,25,0.64)_52%,rgba(5,10,18,0.82)_100%)]"
+        aria-hidden="true"
+      />
+
+      {/* Retain the subtle graph-network texture across the complete page. */}
+      <div className="fixed inset-0 z-[2] opacity-30 pointer-events-none" aria-hidden="true">
+        <AnimatedHeroBackground />
+      </div>
+
+      <div className="relative z-10 flex min-h-[calc(100vh-130px)] flex-col">
+        {/* ── Hero ── */}
+        <section className="relative px-6 py-20 md:py-28 flex flex-col items-center justify-center text-center overflow-hidden border-b border-bp-700/80">
+          <div className="relative z-10 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-bp-700 bg-bp-900/80 backdrop-blur-sm mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-bp-300">
             Interactive Algorithm Visualizer
@@ -61,25 +85,25 @@ export default function HomePage({ setCurrentPage }) {
             <div className="text-3xl md:text-4xl font-extrabold text-accent">
               <StatsCounter end={27} suffix="+" />
             </div>
-            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Algorithms</div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-bp-300">Algorithms</div>
           </div>
           <div>
             <div className="text-3xl md:text-4xl font-extrabold text-accent">
               <StatsCounter end={3} />
             </div>
-            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Structures</div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-bp-300">Structures</div>
           </div>
           <div>
             <div className="text-3xl md:text-4xl font-extrabold text-accent">
               <StatsCounter end={100} suffix="%" />
             </div>
-            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Step-through</div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-bp-300">Step-through</div>
           </div>
           <div>
             <div className="text-3xl md:text-4xl font-extrabold text-accent">
               <StatsCounter end={0} prefix="$" />
             </div>
-            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Open Source</div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-bp-300">Open Source</div>
           </div>
         </div>
       </section>
@@ -92,13 +116,13 @@ export default function HomePage({ setCurrentPage }) {
         <h2 className="text-center font-bold text-2xl md:text-3xl text-slate-200 tracking-wide mb-3">
           Engineered for LeetCode & Interview Success
         </h2>
-        <p className="text-center text-slate-500 text-xs md:text-sm max-w-xl mx-auto mb-12">
+        <p className="text-center text-bp-300 text-xs md:text-sm max-w-xl mx-auto mb-12">
           Hover or just watch — every card is alive.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="group relative bg-bp-900 border border-bp-800 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-700 hover:bg-bp-850/50 transition-all duration-200 pl-6">
+          <div className="group relative bg-bp-900/85 backdrop-blur-sm border border-bp-700/90 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-600 hover:bg-bp-850/90 transition-all duration-200 pl-6">
             <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-accent rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            <div className="flex justify-center bg-bp-950/60 rounded-lg py-3 border border-bp-800/50">
+            <div className="flex justify-center bg-bp-950/75 backdrop-blur-sm rounded-lg py-3 border border-bp-800/70">
               <MiniPreview type="tree" />
             </div>
             <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5 font-sans">
@@ -109,9 +133,9 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="group relative bg-bp-900 border border-bp-800 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-700 hover:bg-bp-850/50 transition-all duration-200 pl-6">
+          <div className="group relative bg-bp-900/85 backdrop-blur-sm border border-bp-700/90 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-600 hover:bg-bp-850/90 transition-all duration-200 pl-6">
             <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-accent rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            <div className="flex justify-center bg-bp-950/60 rounded-lg py-3 border border-bp-800/50">
+            <div className="flex justify-center bg-bp-950/75 backdrop-blur-sm rounded-lg py-3 border border-bp-800/70">
               <MiniPreview type="dfs" />
             </div>
             <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5 font-sans">
@@ -122,9 +146,9 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="group relative bg-bp-900 border border-bp-800 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-700 hover:bg-bp-850/50 transition-all duration-200 pl-6">
+          <div className="group relative bg-bp-900/85 backdrop-blur-sm border border-bp-700/90 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-600 hover:bg-bp-850/90 transition-all duration-200 pl-6">
             <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-accent rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            <div className="flex justify-center bg-bp-950/60 rounded-lg py-3 border border-bp-800/50">
+            <div className="flex justify-center bg-bp-950/75 backdrop-blur-sm rounded-lg py-3 border border-bp-800/70">
               <MiniPreview type="dijkstra" />
             </div>
             <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5 font-sans">
@@ -135,9 +159,9 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="group relative bg-bp-900 border border-bp-800 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-700 hover:bg-bp-850/50 transition-all duration-200 pl-6">
+          <div className="group relative bg-bp-900/85 backdrop-blur-sm border border-bp-700/90 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-600 hover:bg-bp-850/90 transition-all duration-200 pl-6">
             <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-accent rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            <div className="flex justify-center bg-bp-950/60 rounded-lg py-3 border border-bp-800/50">
+            <div className="flex justify-center bg-bp-950/75 backdrop-blur-sm rounded-lg py-3 border border-bp-800/70">
               <MiniPreview type="tarjan" />
             </div>
             <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5 font-sans">
@@ -148,9 +172,9 @@ export default function HomePage({ setCurrentPage }) {
             </p>
           </div>
 
-          <div className="group relative bg-bp-900 border border-bp-800 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-700 hover:bg-bp-850/50 transition-all duration-200 pl-6">
+          <div className="group relative bg-bp-900/85 backdrop-blur-sm border border-bp-700/90 p-5 rounded-lg flex flex-col gap-3 hover:border-bp-600 hover:bg-bp-850/90 transition-all duration-200 pl-6">
             <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-accent rounded-r-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            <div className="flex justify-center bg-bp-950/60 rounded-lg py-3 border border-bp-800/50">
+            <div className="flex justify-center bg-bp-950/75 backdrop-blur-sm rounded-lg py-3 border border-bp-800/70">
               <MiniPreview type="sorting" />
             </div>
             <h3 className="font-bold text-sm text-slate-100 flex items-center gap-1.5 font-sans">
@@ -168,7 +192,7 @@ export default function HomePage({ setCurrentPage }) {
         <h2 className="text-center font-bold text-2xl md:text-3xl text-slate-200 tracking-wide mb-3">
           Canvas-First Interaction
         </h2>
-        <p className="text-center text-slate-500 text-xs md:text-sm max-w-xl mx-auto mb-8">
+        <p className="text-center text-bp-300 text-xs md:text-sm max-w-xl mx-auto mb-8">
           Every visualizer shares the same intuitive controls.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -183,11 +207,11 @@ export default function HomePage({ setCurrentPage }) {
             return (
               <div
                 key={it.label}
-                className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col items-center text-center transition-transform duration-200 hover:-translate-y-0.5"
+                className="bg-bp-900/85 backdrop-blur-sm border border-bp-700/90 rounded-lg p-4 flex flex-col items-center text-center transition-transform duration-200 hover:-translate-y-0.5 hover:bg-bp-850/90"
               >
                 <Icon size={18} className="text-accent" />
                 <div className="mt-2.5 text-[11px] font-bold text-slate-200">{it.label}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">{it.desc}</div>
+                <div className="text-[10px] text-bp-300 mt-0.5">{it.desc}</div>
               </div>
             );
           })}
@@ -196,6 +220,7 @@ export default function HomePage({ setCurrentPage }) {
 
       {/* ── Code Snippet ── */}
       <CodeSnippet />
+      </div>
     </div>
   );
 }

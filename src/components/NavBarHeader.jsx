@@ -1,4 +1,4 @@
-import { Home, GitBranch, Network, ArrowUpDown, BookOpen } from "lucide-react";
+import { Home, GitBranch, Network, ArrowUpDown, BookOpen, ListOrdered } from "lucide-react";
 
 export default function NavBarHeader({ currentPage, setCurrentPage }) {
   const navItems = [
@@ -21,6 +21,11 @@ export default function NavBarHeader({ currentPage, setCurrentPage }) {
       id: "sorting-visualizer",
       label: "Sorting",
       icon: <ArrowUpDown size={16} />,
+    },
+    {
+      id: "linked-list-visualizer",
+      label: "Linked List",
+      icon: <ListOrdered size={16} />,
     },
     {
       id: "learn",

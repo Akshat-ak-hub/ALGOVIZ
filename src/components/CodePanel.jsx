@@ -5,6 +5,7 @@ import { tokenizeLine, TOKEN_COLOR } from "../utils/syntaxHighlight";
 import { getTreeCode } from "../algorithms/treeAlgorithmCode";
 import { getGraphCode } from "../algorithms/graphAlgorithmCode";
 import { getSortingCode } from "../algorithms/sortingAlgorithmCode";
+import { getLinkedListCode } from "../algorithms/linkedListAlgorithmCode";
 
 const LANGUAGES = [
   { id: "cpp", label: "C++" },
@@ -20,6 +21,8 @@ export default function CodePanel({ algorithm, traversalType, currentLine, title
       ? getGraphCode(algorithm, language)
       : kind === "sorting"
       ? getSortingCode(algorithm, language)
+      : kind === "linked-list"
+      ? getLinkedListCode(algorithm, language)
       : getTreeCode(algorithm, language, traversalType));
   const containerRef = useRef(null);
   const lineRefs = useRef({});

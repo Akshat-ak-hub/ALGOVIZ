@@ -11,6 +11,8 @@ import {
   Info, 
   Terminal 
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ALGORITHMS } from "../data/algorithmsData";
 
 export default function LearnPage() {
@@ -221,8 +223,8 @@ export default function LearnPage() {
                 {/* Tab: Concept */}
                 {activeTab === "concept" && (
                   <div className="flex flex-col gap-6 animate-fadeIn">
-                    <div className="text-bp-200 text-sm leading-relaxed whitespace-pre-line">
-                      {selectedAlgo.explanation}
+                    <div className="text-bp-200 text-sm leading-relaxed prose prose-invert prose-sm max-w-none prose-code:text-accent prose-code:bg-bp-950 prose-code:px-1 prose-code:rounded prose-strong:text-slate-100">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedAlgo.explanation}</ReactMarkdown>
                     </div>
 
                     <div className="mt-4 border-t border-bp-800 pt-6">
@@ -282,9 +284,9 @@ export default function LearnPage() {
                           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-accent-muted border border-accent/30 text-accent flex items-center justify-center text-xs font-bold">
                             {idx + 1}
                           </div>
-                          <p className="text-bp-200 text-xs md:text-sm leading-relaxed mt-0.5">
-                            {step}
-                          </p>
+                          <div className="text-bp-200 text-xs md:text-sm leading-relaxed mt-0.5 prose prose-invert prose-sm max-w-none prose-p:m-0 prose-code:text-accent prose-code:bg-bp-950 prose-code:px-1 prose-code:rounded prose-strong:text-slate-100">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{step}</ReactMarkdown>
+                          </div>
                         </div>
                       ))}
                     </div>

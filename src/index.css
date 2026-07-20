@@ -162,3 +162,120 @@ button:focus-visible {
 .animate-fadeIn {
   animation: fadeSlideIn 0.2s ease-out;
 }
+
+/* ============================================================
+   AlgoVisual workspace aesthetic — dotted grid, neon glow,
+   neon frame, floating playback pill
+   ============================================================ */
+
+/* ── Decorative home-hero video ── */
+.hero-video {
+  filter: saturate(1.82) contrast(1.08) brightness(1.08);
+  transform: scale(1.02);
+}
+
+/* A motion-free static dark hero is preferable to autoplay video. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-video {
+    display: none;
+  }
+}
+
+/* ── Full-page Home video treatment ── */
+.home-video-page .bg-bp-900 {
+  background-color: rgb(22 27 34 / 0.86);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.home-video-page .bg-bp-950 {
+  background-color: rgb(13 17 23 / 0.84);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.home-video-page .text-slate-500 {
+  color: #b1bac4;
+}
+
+/* ── Dotted blueprint grid background (canvas container / panels) ── */
+.viz-grid {
+  background-color: #0a0d13;
+  background-image:
+    radial-gradient(circle at center, rgba(88, 166, 255, 0.12) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: -11px -11px;
+}
+
+/* Subtle vignette overlay to focus the center of the canvas */
+.viz-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(5, 8, 13, 0.55) 100%);
+  z-index: 1;
+}
+
+/* ── Neon frame around the active workspace canvas ── */
+.viz-neon-frame {
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(88, 166, 255, 0.08),
+    0 0 24px -6px rgba(88, 166, 255, 0.35),
+    inset 0 0 40px -20px rgba(88, 166, 255, 0.25);
+}
+
+/* ── Neon glow helpers ── */
+.glow-cyan {
+  box-shadow: 0 0 8px rgba(88, 166, 255, 0.55), 0 0 18px rgba(88, 166, 255, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 8px rgba(63, 185, 80, 0.6), 0 0 20px rgba(63, 185, 80, 0.35);
+}
+
+/* ── Floating segmented playback pill ── */
+.playback-pill {
+  background: rgba(13, 17, 23, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(88, 166, 255, 0.28);
+  box-shadow:
+    0 8px 28px -8px rgba(0, 0, 0, 0.7),
+    0 0 20px -6px rgba(88, 166, 255, 0.35);
+}
+
+.playback-pill-primary {
+  box-shadow: 0 0 14px -2px rgba(88, 166, 255, 0.75);
+}
+
+/* ── Active-node pulsing ring (used behind CURRENT node overlay) ── */
+@keyframes viz-pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  70% { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.viz-pulse-ring {
+  animation: viz-pulse-ring 1.6s ease-out infinite;
+}
+
+/* ============================================================
+   Reduced-motion: honor the user's OS preference
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-gentle-pulse,
+  .viz-pulse-ring {
+    animation: none !important;
+  }
+}

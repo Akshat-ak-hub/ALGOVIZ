@@ -6,7 +6,9 @@ import HomePage from "./pages/HomePage";
 import TreeVisualizer from "./components/TreeVisualizer";
 import GraphVisualizer from "./components/GraphVisualizer";
 import SortingVisualizer from "./components/SortingVisualizer";
+import LinkedListVisualizer from "./components/LinkedListVisualizer";
 import LearnPage from "./pages/LearnPage";
+
 
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
@@ -32,6 +34,8 @@ export default function App() {
         return <GraphVisualizer />;
       case "sorting-visualizer":
         return <SortingVisualizer />;
+      case "linked-list-visualizer":
+        return <LinkedListVisualizer />;
       case "learn":
         return <LearnPage />;
       default:

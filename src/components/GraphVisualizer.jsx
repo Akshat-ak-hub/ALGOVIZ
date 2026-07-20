@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  Play,
-  Pause,
   RotateCcw,
-  ChevronRight,
-  ChevronLeft,
   Trash2,
   Shuffle,
   Activity,
@@ -16,8 +12,6 @@ import {
   MousePointer,
   ArrowUpFromDot,
   Hand,
-  Zap,
-  Timer,
   Terminal,
   Move,
   Plus,
@@ -39,6 +33,9 @@ import {
 } from "../algorithms/graphAlgorithms";
 import { useToast } from "../hooks/useToast";
 import CodePanel from "./CodePanel";
+import VisualizerWorkspace from "./ui/VisualizerWorkspace";
+import PlaybackPill from "./ui/PlaybackPill";
+import ParamPanel, { ParamSlider } from "./ui/ParamPanel";
 
 /* ── Algorithm title lookup for the code panel header ── */
 const ALGORITHM_TITLES = {
@@ -363,25 +360,9 @@ export default function GraphVisualizer() {
     ctx.translate(cameraRef.current.x, cameraRef.current.y);
     ctx.scale(z, z);
 
-    // Grid lines — infinite relative to camera
-    const gridSize = 40;
-    const startX = Math.floor(-cameraRef.current.x / z / gridSize) * gridSize;
-    const startY = Math.floor(-cameraRef.current.y / z / gridSize) * gridSize;
-    const endX = (-cameraRef.current.x) / z + w / z + gridSize;
-    const endY = (-cameraRef.current.y) / z + h / z + gridSize;
-
-    ctx.strokeStyle = Colors.grid;
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    for (let x = startX; x < endX; x += gridSize) {
-      ctx.moveTo(x, startY);
-      ctx.lineTo(x, endY);
-    }
-    for (let y = startY; y < endY; y += gridSize) {
-      ctx.moveTo(startX, y);
-      ctx.lineTo(endX, y);
-    }
-    ctx.stroke();
+    // Grid is now rendered by the CSS `.viz-grid` dotted background on the
+    // canvas container (shows through the transparent canvas), giving the
+    // blueprint look without a second overlapping grid.
 
     // Edges
     for (const edge of graphRef.current.edges) {
@@ -395,7 +376,7 @@ export default function GraphVisualizer() {
         ctx.shadowBlur = 0;
       } else {
         ctx.shadowColor = strokeColor;
-        ctx.shadowBlur = 10 * s;
+        ctx.shadowBlur = 18 * s;
       }
 
       ctx.strokeStyle = strokeColor;
@@ -477,10 +458,24 @@ export default function GraphVisualizer() {
 
       if (node.state !== NodeState.UNVISITED) {
         ctx.shadowColor = nodeColor.fill;
-        ctx.shadowBlur = 12 * s;
+        ctx.shadowBlur = 22 * s;
       }
 
       const r = 22 * s;
+
+      // Extra outer bloom halo for the actively-processed node (AlgoVisual look)
+      if (node.state === NodeState.CURRENT || node.state === NodeState.IN_PATH) {
+        ctx.save();
+        ctx.shadowColor = nodeColor.fill;
+        ctx.shadowBlur = 32 * s;
+        ctx.strokeStyle = nodeColor.border;
+        ctx.lineWidth = 2 * s;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(x, y, r + 5 * s, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Solid filled circle
       ctx.fillStyle = nodeColor.fill;
@@ -927,10 +922,10 @@ export default function GraphVisualizer() {
   const progressPercent = totalStepsCount > 0 ? (currentStepIdx / totalStepsCount) * 100 : 0;
 
   return (
-    <div className="bg-bp-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
-      {/* Sidebar Panel */}
-      <aside className="w-full lg:w-[300px] xl:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1 min-w-0">
-        
+    <>
+    <VisualizerWorkspace
+      left={
+        <>
         {/* Toggle directed/undirected Graph type */}
         <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Graph Mode</label>
@@ -1040,90 +1035,9 @@ export default function GraphVisualizer() {
           </button>
         </div>
 
-        {/* Speed Controls */}
+        {/* Timeline panel — transport lives in the floating pill; this keeps the scrubber */}
         <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
-          <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Playback speed</label>
-          <input
-            type="range"
-            min="50"
-            max="1500"
-            step="50"
-            value={speedMs}
-            onChange={(e) => setSpeedMs(parseInt(e.target.value, 10))}
-            className="w-full h-1 bg-bp-700 rounded appearance-none cursor-pointer accent-accent"
-          />
-          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-            <span className="flex items-center gap-1"><Zap size={11} /> Fast</span>
-            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 rounded text-accent">{getSpeedLabel(speedMs)} · {speedMs}ms</span>
-            <span className="flex items-center gap-1"><Timer size={11} /> Slow</span>
-          </div>
-        </div>
-
-        {/* Display Size Controls */}
-        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
-          <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Node &amp; label size</label>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
-              disabled={dimensionScale <= DIM_MIN + 1e-6}
-              title="Decrease size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-700 hover:bg-bp-600 disabled:opacity-30 disabled:hover:bg-bp-700 text-slate-200 cursor-pointer transition duration-200"
-            >
-              <Minus size={13} />
-            </button>
-            <input
-              type="range"
-              min={DIM_MIN * 100}
-              max={DIM_MAX * 100}
-              step={DIM_STEP * 100}
-              value={dimensionScale * 100}
-              onChange={(e) => setDimensionScale(clampDim(parseInt(e.target.value, 10) / 100))}
-              className="flex-1 h-1 bg-bp-700 appearance-none cursor-pointer accent-accent"
-            />
-            <button
-              onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
-              disabled={dimensionScale >= DIM_MAX - 1e-6}
-              title="Increase size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-700 hover:bg-bp-600 disabled:opacity-30 disabled:hover:bg-bp-700 text-slate-200 cursor-pointer transition duration-200"
-            >
-              <Plus size={13} />
-            </button>
-          </div>
-          <div className="flex justify-between items-center text-[9px] font-bold text-slate-500">
-            <span>Small</span>
-            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 text-accent tabular-nums">{formatDim(dimensionScale)}</span>
-            <span>Large</span>
-          </div>
-        </div>
-
-        {/* Control Button panel */}
-        <div className="bg-bp-800 border border-bp-700 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={stepBackward}
-              disabled={!isRunning || currentStepIdx <= 1}
-              className="flex items-center justify-center gap-1 bg-bp-700 hover:bg-bp-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
-            >
-              <ChevronLeft size={12} />
-              Back
-            </button>
-            <button
-              onClick={togglePlayPause}
-              disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1 bg-bp-700 hover:bg-bp-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
-            >
-              {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-              {isPlaying ? "Pause" : "Play"}
-            </button>
-            <button
-              onClick={stepForward}
-              disabled={!isRunning || currentStepIdx >= totalStepsCount}
-              className="flex items-center justify-center gap-1 bg-bp-700 hover:bg-bp-600 disabled:opacity-30 text-slate-300 font-bold text-xs py-2 px-2 rounded-lg cursor-pointer transition duration-200"
-            >
-              Next
-              <ChevronRight size={12} />
-            </button>
-          </div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Timeline</label>
 
           {/* Step scrubber (Item 9) */}
           {isRunning && totalStepsCount > 0 && (
@@ -1211,14 +1125,50 @@ export default function GraphVisualizer() {
             </div>
           </div>
         </div>
-      </aside>
+        </>
+      }
+      right={
+        <>
+          <div className="min-h-[320px] xl:min-h-[380px] flex-1 flex">
+            <CodePanel
+              algorithm={activeAlgorithm}
+              currentLine={currentCodeLine}
+              kind="graph"
+              title={ALGORITHM_TITLES[activeAlgorithm] || "Algorithm Code"}
+            />
+          </div>
 
-      {/* Main Canvas & Separate Dedicated Workspace for Tables & Logs */}
-      <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 min-w-0">
-        {/* Canvas + Code Panel row */}
-        <div className="flex flex-col lg:flex-row gap-4 min-w-0">
+          <ParamPanel title="Parameters">
+            <ParamSlider
+              label="Playback speed"
+              value={speedMs}
+              min={50}
+              max={1500}
+              step={50}
+              onChange={(v) => setSpeedMs(v)}
+              display={`${getSpeedLabel(speedMs)} · ${speedMs}ms`}
+              leftHint="Fast"
+              rightHint="Slow"
+            />
+            <ParamSlider
+              label="Node & label size"
+              value={dimensionScale * 100}
+              min={DIM_MIN * 100}
+              max={DIM_MAX * 100}
+              step={DIM_STEP * 100}
+              onChange={(v) => setDimensionScale(clampDim(v / 100))}
+              display={formatDim(dimensionScale)}
+              leftHint="Small"
+              rightHint="Large"
+              onDec={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
+              onInc={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
+            />
+          </ParamPanel>
+        </>
+      }
+    >
         {/* Canvas panel */}
-        <div className="bg-bp-900 border border-bp-700 rounded-lg relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[320px] flex-1 min-w-0">
+        <div className="bg-bp-900 viz-grid viz-neon-frame viz-vignette rounded-lg relative overflow-hidden shadow-inner flex flex-col justify-center items-center min-h-[420px] flex-1 min-w-0">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
             <div className="absolute top-0 left-0 right-0 h-1 bg-bp-700 z-20">
@@ -1335,17 +1285,21 @@ export default function GraphVisualizer() {
               </span>
             </div>
           )}
-        </div>
 
-          {/* Code Panel */}
-          <div className="w-full lg:w-[300px] xl:w-[380px] lg:flex-shrink-0 h-[360px] lg:h-auto">
-            <CodePanel
-              algorithm={activeAlgorithm}
-              currentLine={currentCodeLine}
-              kind="graph"
-              title={ALGORITHM_TITLES[activeAlgorithm] || "Algorithm Code"}
+          {/* Floating segmented playback pill */}
+          {isRunning && (
+            <PlaybackPill
+              isPlaying={isPlaying}
+              isRunning={isRunning}
+              canBack={currentStepIdx > 1}
+              canStep={currentStepIdx < totalStepsCount}
+              stepLabel={totalStepsCount > 0 ? `Step ${currentStepIdx} / ${totalStepsCount}` : ""}
+              onBack={stepBackward}
+              onPlayPause={togglePlayPause}
+              onStep={stepForward}
+              onReset={resetVisualizer}
             />
-          </div>
+          )}
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
@@ -1483,7 +1437,7 @@ export default function GraphVisualizer() {
             })}
           </div>
         </div>
-      </main>
+      </VisualizerWorkspace>
 
       {/* Edge Weight modal overlay */}
       {isWeightModalOpen && (
@@ -1523,6 +1477,6 @@ export default function GraphVisualizer() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
