@@ -60,12 +60,27 @@ export default function LearnPage() {
             Algorithm Manual
           </h1>
           <p className="text-bp-300 text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
-            In-depth concepts, operational complexities, step-by-step algorithms, and clean pseudocode for tree and graph traversals.
+            Learn how each algorithm works, follow its steps, and see clear pseudocode with examples.
           </p>
         </div>
         <div className="text-xs bg-bp-800 border border-bp-700 text-slate-300 px-4 py-2 rounded-lg self-center md:self-auto font-mono">
           Total Algorithms: <span className="text-accent font-bold">{ALGORITHMS.length}</span>
         </div>
+      </section>
+
+      <section className="learning-quick-guide grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3" aria-label="Quick guide to common terms">
+        {[
+          { term: "Node", meaning: "A point or item in a tree or graph." },
+          { term: "Edge", meaning: "A connection between two nodes." },
+          { term: "Root / leaf", meaning: "The top of a tree / a node with no children." },
+          { term: "Queue / stack", meaning: "A line (first in, first out) / a pile (last in, first out)." },
+          { term: "V, E, and O", meaning: "V = nodes, E = connections. O describes how the work grows as the graph gets bigger." },
+        ].map(({ term, meaning }) => (
+          <div key={term} className="bg-bp-900 border border-bp-800 p-3 shadow-sm">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-wider text-accent">{term}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-bp-300">{meaning}</p>
+          </div>
+        ))}
       </section>
 
       {/* Control Bar: Search & Category Pills */}
@@ -232,6 +247,9 @@ export default function LearnPage() {
                         <Cpu size={14} className="text-accent" />
                         Complexity Analysis
                       </h4>
+                      <p className="-mt-2 mb-4 text-xs leading-relaxed text-bp-300">
+                        These estimates describe how the work or memory grows as the input gets larger. Best, average, and worst show different input cases.
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         
                         {/* Time Complexity Card */}
@@ -296,6 +314,9 @@ export default function LearnPage() {
                 {/* Tab: Pseudocode */}
                 {activeTab === "pseudocode" && (
                   <div className="flex flex-col gap-4 animate-fadeIn relative">
+                    <p className="text-xs leading-relaxed text-bp-300">
+                      Pseudocode is a simple outline of the logic. It is not meant to run as-is in a programming language.
+                    </p>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400 text-xs font-mono">pseudocode.py</span>
                       <button

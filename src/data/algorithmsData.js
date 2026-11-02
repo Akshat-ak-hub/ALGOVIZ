@@ -9,16 +9,16 @@ export const ALGORITHMS = [
     name: "DFS Traversals (Pre/In/Postorder)",
     category: "trees",
     complexity: "O(N)",
-    summary: "Traverse a binary tree recursively in Preorder, Inorder, or Postorder sequence.",
+    summary: "Visit nodes before their children, between them, or after them.",
     timeComplexity: { best: "O(N)", average: "O(N)", worst: "O(N)" },
     spaceComplexity: "O(H) where H is tree height (call stack)",
-    explanation: "Depth-First Search (DFS) traversals explore as deep as possible along each branch before backtracking. For a binary tree, three recursive orderings are defined:\n\n*   **Preorder (Root-Left-Right)**: Node is visited first. Great for cloning a tree or writing prefix mathematical expressions.\n*   **Inorder (Left-Root-Right)**: Left child is visited, then root, then right child. Crucial for Binary Search Trees (BST) because it visits elements in sorted order.\n*   **Postorder (Left-Right-Root)**: Children are visited before parent. Used when you need bottom-up info (e.g. deleting a tree, evaluating postfix equations, or calculating tree height).",
+    explanation: "A **tree** is made of nodes connected like branches. It starts at a top node called the **root**. In a binary tree, each node can have a left child and a right child.\n\nDepth-first search (DFS) follows one branch down as far as it can, then comes back and tries another. The three names describe when we visit a node compared with its children:\n\n* **Preorder: Root, Left, Right.** Visit a node first, then its left and right branches.\n* **Inorder: Left, Root, Right.** Visit the left branch, then the node, then the right branch. In a binary search tree, this gives values from smallest to largest.\n* **Postorder: Left, Right, Root.** Visit both branches before the node. This is useful when a parent needs results from its children, such as when calculating heights.\n\nFor example, if a node is `2`, with `1` on the left and `3` on the right, the orders are `2, 1, 3`; `1, 2, 3`; and `1, 3, 2`.",
     steps: [
-      "Begin recursion from the root node.",
-      "Base Case: If the current node is null, backtrack (return).",
-      "For **Preorder**: Process the current node's value, then recurse left, then recurse right.",
-      "For **Inorder**: Recurse left first, then process the current node's value, then recurse right.",
-      "For **Postorder**: Recurse left, then recurse right, and finally process the current node's value."
+      "Start at the root (the top node).",
+      "If there is no node here, stop this branch and go back.",
+      "For **Preorder**, record the node, then visit its left branch and its right branch.",
+      "For **Inorder**, visit the left branch, record the node, then visit the right branch.",
+      "For **Postorder**, visit both branches, then record the node."
     ],
     pseudocode: `// DFS Preorder Traversal
 function preorder(node):
@@ -49,17 +49,18 @@ function postorder(node):
     name: "BFS (Level Order Traversal)",
     category: "trees",
     complexity: "O(N)",
-    summary: "Visit nodes level-by-level, from left to right, using a queue.",
+    summary: "Visit the root, then its children, then the next row of the tree.",
     timeComplexity: { best: "O(N)", average: "O(N)", worst: "O(N)" },
     spaceComplexity: "O(W) where W is maximum level width",
-    explanation: "Breadth-First Search (BFS) or Level Order Traversal visits nodes layer-by-layer starting from the root (level 0), then its children (level 1), and so on. A Queue is used to maintain a FIFO (First-In, First-Out) list of nodes to explore. It guarantees that nodes closer to the root are processed before those farther away, which is useful for structural serialization or short-path searching.",
+    explanation: "Breadth-first search (BFS), also called level-order traversal, visits the tree one row at a time: the root first, then its children, then the next row. It uses a **queue**, which works like a line: the first node added is the first one visited.\n\nBecause nodes are handled in the order they are discovered, every parent is visited before its children. This is useful when you want to inspect or print the tree by rows.",
     steps: [
-      "Initialize an empty Queue.",
-      "Enqueue the root node if it is not null.",
-      "While the queue is not empty, repeat steps 4 to 6:",
-      "Dequeue the front node and record its value.",
-      "If the dequeued node has a left child, enqueue it.",
-      "If the dequeued node has a right child, enqueue it."
+      "Make an empty queue (a first-in, first-out line).",
+      "Add the root to the queue if the tree is not empty.",
+      "While the queue has a node, take the node at the front.",
+      "Record its value.",
+      "Add its left child to the back of the queue, if it has one.",
+      "Add its right child to the back of the queue, if it has one.",
+      "Repeat until the queue is empty."
     ],
     pseudocode: `function levelOrder(root):
     if root is null:
@@ -82,19 +83,18 @@ function postorder(node):
     name: "Height & Diameter of a Tree",
     category: "trees",
     complexity: "O(N)",
-    summary: "Calculate the height (depth) and longest path (diameter) in a tree in a single pass.",
+    summary: "Find how tall the tree is and the longest route between any two nodes.",
     timeComplexity: { best: "O(N)", average: "O(N)", worst: "O(N)" },
     spaceComplexity: "O(H) recursion stack depth",
-    explanation: "The **height** of a tree node is the length of the longest path from that node to a leaf. The **diameter** (or width) of a tree is the length of the longest path between any two nodes in a tree. This path may or may not pass through the root.\n\nBy calculating height recursively bottom-up, we can compute the diameter at each node as: `diameter = left_height + right_height`. We maintain a global maximum diameter throughout the traversal.",
+    explanation: "The **height** is the number of nodes on the longest route from the root down to a leaf (a node with no children). The **diameter** is the number of connections on the longest route between any two nodes. The route does not have to pass through the root. (Diameter is different from width: width counts how many nodes are on one row.)\n\nAt each node, the longest route that passes through it is the left branch height plus the right branch height. The algorithm checks this at every node and keeps the largest result. It works from the leaves upward so each parent can use the heights of its children.",
     steps: [
-      "Create a global variable `maxDiameter = 0`.",
-      "Define a recursive helper function `getHeight(node)` which returns the height of the subtree at `node`.",
-      "If the node is null, return `0` (base case).",
-      "Recursively calculate left subtree height: `leftH = getHeight(node.left)`.",
-      "Recursively calculate right subtree height: `rightH = getHeight(node.right)`.",
-      "Update `maxDiameter` with the maximum of its current value and the sum of left and right heights: `maxDiameter = max(maxDiameter, leftH + rightH)`.",
-      "Return the height of the current node: `max(leftH, rightH) + 1`.",
-      "After the recursion finishes, the tree height is `getHeight(root)` and the diameter is `maxDiameter`."
+      "Set the longest route found so far to `0`.",
+      "Start at the root and ask each node for the heights of its left and right branches.",
+      "An empty branch has height `0`.",
+      "At each node, add the left and right heights to get the longest route through it.",
+      "Keep the largest route seen so far.",
+      "Return the taller branch height plus `1` for the current node.",
+      "When the walk is done, the root's height and the largest route are the answers."
     ],
     pseudocode: `let maxDiameter = 0
 
@@ -121,17 +121,17 @@ function getHeight(node):
     name: "Lowest Common Ancestor (LCA)",
     category: "trees",
     complexity: "O(N)",
-    summary: "Find the deepest node in a tree that has both target nodes as descendants.",
+    summary: "Find the closest shared ancestor of two nodes in the tree.",
     timeComplexity: { best: "O(N)", average: "O(N)", worst: "O(N)" },
     spaceComplexity: "O(H) recursion stack depth",
-    explanation: "The Lowest Common Ancestor (LCA) of two nodes $p$ and $q$ in a tree is defined as the lowest (deepest) node $T$ that has both $p$ and $q$ as descendants (where we allow a node to be a descendant of itself).\n\nIn a binary tree, we search recursively. If the current root is null, or matches either $p$ or $q$, we return the root. Otherwise, we look in left and right subtrees. If both subtrees return a non-null node, then the current node is the LCA.",
+    explanation: "The **lowest common ancestor (LCA)** is the first node where the paths from two chosen nodes meet as you travel upward. For example, if nodes `4` and `5` sit under node `2`, their LCA is `2`. “Lowest” means the shared ancestor closest to the chosen nodes.\n\nThe search checks both branches. If one chosen node is found on the left and the other on the right, the current node is their LCA. If both are found in the same branch, the answer is farther down that branch. This version assumes both chosen nodes are in the tree.",
     steps: [
-      "Start recursive search from the root.",
-      "If `root` is null or matches node `p` or node `q`, return `root`.",
-      "Recursively search the left subtree: `leftLCA = findLCA(root.left, p, q)`.",
-      "Recursively search the right subtree: `rightLCA = findLCA(root.right, p, q)`.",
-      "If both `leftLCA` and `rightLCA` are not null, it means `p` and `q` are split in different subtrees of the current node. Return `root`.",
-      "Otherwise, return the non-null result (`leftLCA` if not null, else `rightLCA`)."
+      "Start at the root and look for either chosen node.",
+      "If the current node is empty or is one of the chosen nodes, return it.",
+      "Search the left branch for either chosen node.",
+      "Search the right branch for either chosen node.",
+      "If each branch found one chosen node, the current node is their shared ancestor.",
+      "If only one branch found a node, pass that result back up the tree."
     ],
     pseudocode: `function findLCA(root, p, q):
     // Base Cases
@@ -153,17 +153,17 @@ function getHeight(node):
     name: "Path Sum",
     category: "trees",
     complexity: "O(N)",
-    summary: "Check if there is a root-to-leaf path whose sum of node values equals a target.",
+    summary: "Check whether a route from the root to a leaf adds up to the target.",
     timeComplexity: { best: "O(N)", average: "O(N)", worst: "O(N)" },
     spaceComplexity: "O(H) recursion stack depth",
-    explanation: "The Path Sum problem checks whether a binary tree has a root-to-leaf path such that adding up all the values along the path equals a target integer. \n\nWe solve this recursively. For each node, we subtract its value from the remaining target sum. If we reach a leaf node and the remaining sum equals the leaf's value, we have found a valid path.",
+    explanation: "This checks whether one complete route from the root to a leaf adds up to a chosen target. A **leaf** is a node with no children; stopping at an earlier node does not count.\n\nAs the search moves down a branch, it subtracts each node's value from the amount still needed. At a leaf, the route works if nothing is left to add. The search tries both branches until it finds a match or runs out of paths.",
     steps: [
-      "Start at the root node.",
-      "If the tree is empty (root is null), return `false`.",
-      "Subtract the current node's value from the target sum: `remaining = target - node.value`.",
-      "Check if the current node is a leaf (both left and right children are null).",
-      "If it is a leaf, return whether `remaining == 0` (or `target == node.value`).",
-      "If not a leaf, recursively check left and right subtrees: `hasPathSum(node.left, remaining) || hasPathSum(node.right, remaining)`."
+      "Begin at the root with the full target amount.",
+      "If the tree is empty, there is no matching route.",
+      "Subtract the current node's value from the amount still needed.",
+      "If this is a leaf (a node with no children), the route matches when the amount left is `0`.",
+      "If it is not a leaf, continue down its left and right branches.",
+      "Return true as soon as one complete route matches."
     ],
     pseudocode: `function hasPathSum(node, targetSum):
     if node is null:
@@ -183,17 +183,17 @@ function getHeight(node):
     name: "Binary Lifting",
     category: "trees",
     complexity: "O(N log N) / O(log N)",
-    summary: "Precompute binary jumps (ancestors of powers of 2) to answer LCA/ancestor queries in logarithmic time.",
+    summary: "Save large upward jumps so ancestor and LCA questions take fewer steps.",
     timeComplexity: { best: "O(log N) per query", average: "O(log N) per query", worst: "O(log N) per query (O(N log N) preprocessing)" },
     spaceComplexity: "O(N log N) storage matrix",
-    explanation: "Binary Lifting is a powerful dynamic programming technique on trees. By precomputing a table `up[u][i]` which stores the $2^i$-th ancestor of node $u$, we can jump up the tree by powers of 2. \n\nThis makes finding the $k$-th ancestor or querying the Lowest Common Ancestor (LCA) extremely fast ($O(log N)$) instead of doing linear traversals. It is commonly used in competitive programming and large tree structures.",
+    explanation: "Binary lifting is a way to answer “who is this node's ancestor?” questions quickly. Instead of saving only each node's parent, it also saves where you land after jumping up `2`, `4`, `8`, and more steps. These are called **power-of-two jumps**.\n\nFor example, to move up `13` levels, the algorithm can jump `8`, then `4`, then `1` instead of taking 13 separate steps. It builds the jump table once, then uses it to find an ancestor or the lowest common ancestor (LCA) with fewer lookups. The tradeoff is extra memory for the table.",
     steps: [
-      "Perform a DFS traversal to calculate the direct parent (2^0 ancestor) and depth of every node.",
-      "Initialize a table `up[N][LOG_N]` where `up[u][0] = parent[u]`.",
-      "Populate the table using the recurrence relation: `up[u][i] = up[up[u][i-1]][i-1]` (the 2^i ancestor is the 2^(i-1) ancestor of the 2^(i-1) ancestor).",
-      "To query the k-th ancestor of node `u`, iterate through bits of `k`. If the i-th bit is set, replace `u` with `up[u][i]`.",
-      "To query LCA of `u` and `v`, first lift the deeper node to the same depth as the other.",
-      "If they are now the same node, return it. Otherwise, lift both nodes together by decreasing powers of 2 until their parents match."
+      "Walk through the tree and record each node's parent and depth (distance from the root).",
+      "Save each node's parent as its one-step jump.",
+      "Build larger jumps: a four-step jump is two two-step jumps, and so on.",
+      "To move up `k` steps, combine the saved jumps that add up to `k`.",
+      "To find an LCA, first move the deeper node up until both nodes are at the same depth.",
+      "Then move both upward using the largest jumps that keep them apart. Their parent is the LCA."
     ],
     pseudocode: `// Preprocessing step
 let up[MAX_NODES][LOG_N]
@@ -248,16 +248,17 @@ function getLCA(u, v):
     name: "Breadth-First Search (BFS)",
     category: "graphs",
     complexity: "O(V + E)",
-    summary: "Traverse a graph layer-by-layer from a starting vertex using a queue.",
+    summary: "Explore nearby nodes first, moving outward from a starting node.",
     timeComplexity: { best: "O(V + E)", average: "O(V + E)", worst: "O(V + E)" },
     spaceComplexity: "O(V) for queue and visited set",
-    explanation: "Breadth-First Search (BFS) starts at a selected node and explores all of its neighboring nodes at the current depth level before moving on to nodes at the next depth level. It uses a **Queue** (First-In-First-Out) to manage the frontier. BFS is guaranteed to find the shortest path between two nodes in an unweighted graph.",
+    explanation: "A **graph** is a set of nodes joined by connections called edges. Breadth-first search (BFS) starts at one node and visits its direct neighbors before moving farther away. It uses a **queue**, like a line: the first node added is the first one explored.\n\nBFS finds a path with the fewest edges when every edge has the same cost (or the graph has no weights). If edges have different costs, use a weighted shortest-path algorithm instead.",
     steps: [
-      "Create a queue `Q` and a set/boolean array `visited` initialized to false.",
-      "Mark the start node as visited and enqueue it into `Q`.",
-      "While `Q` is not empty, do the following:",
-      "Dequeue a node `curr` from `Q` and process it.",
-      "For each unvisited neighbor of `curr`, mark it as visited and enqueue it."
+      "Make an empty queue and an empty list of visited nodes.",
+      "Add the start node to both the queue and the visited list.",
+      "While the queue has nodes, take the one at the front.",
+      "Process that node.",
+      "For each neighbor not yet visited, mark it visited and add it to the back of the queue.",
+      "Continue until the queue is empty."
     ],
     pseudocode: `function BFS(Graph, start_node):
     let Q = new Queue()
@@ -280,16 +281,17 @@ function getLCA(u, v):
     name: "Depth-First Search (DFS)",
     category: "graphs",
     complexity: "O(V + E)",
-    summary: "Traverse a graph by exploring as far as possible along each branch before backtracking.",
+    summary: "Follow one route as far as possible, then back up and try another.",
     timeComplexity: { best: "O(V + E)", average: "O(V + E)", worst: "O(V + E)" },
     spaceComplexity: "O(V) recursion stack depth",
-    explanation: "Depth-First Search (DFS) explores as deep as possible along each branch before backtracking. It can be implemented recursively or iteratively using a Stack. DFS is a core building block for many complex graph algorithms, including topological sorting, cycle detection, and finding strongly connected components.",
+    explanation: "Depth-first search (DFS) follows one route as far as it can. When it reaches a dead end, it goes back to the last place with an unexplored connection and tries another route. A **visited** set remembers which nodes have already been seen, so the search does not get stuck going around a loop.\n\nDFS can use a stack (a last-in, first-out pile) or function calls to remember where to return. It is also a building block for finding cycles, ordering tasks, and grouping connected nodes.",
     steps: [
-      "Create a set/boolean array `visited` initialized to false.",
-      "Define a recursive helper function `dfsHelper(node)`.",
-      "In `dfsHelper(node)`: Mark the node as visited, process it, then iterate through its neighbors.",
-      "For each neighbor, if it has not been visited, recursively call `dfsHelper(neighbor)`.",
-      "To handle disconnected graphs, loop through all nodes in the graph and invoke `dfsHelper` if a node is not yet visited."
+      "Start with an empty list of visited nodes.",
+      "Choose a starting node and mark it visited.",
+      "Process it, then choose one neighbor that has not been visited yet.",
+      "Repeat the search from that neighbor, going as far as possible.",
+      "When a node has no unvisited neighbors, go back and try another route.",
+      "If some nodes remain unvisited, start again from one of them."
     ],
     pseudocode: `function DFS(Graph):
     let visited = new Set()
@@ -310,20 +312,18 @@ function dfsHelper(node, visited, Graph):
     name: "Topological Sort (Kahn's Algorithm)",
     category: "graphs",
     complexity: "O(V + E)",
-    summary: "Order vertices of a Directed Acyclic Graph (DAG) linearly based on in-degrees.",
+    summary: "Put dependent tasks in an order where every prerequisite comes first.",
     timeComplexity: { best: "O(V + E)", average: "O(V + E)", worst: "O(V + E)" },
     spaceComplexity: "O(V) to store in-degrees and queue",
-    explanation: "A Topological Sort of a Directed Acyclic Graph (DAG) is a linear ordering of its vertices such that for every directed edge $uv$ from vertex $u$ to vertex $v$, $u$ comes before $v$. \n\n**Kahn's Algorithm** works by calculating the in-degree (number of incoming edges) of all vertices. Nodes with an in-degree of 0 are enqueued. We dequeue a node, add it to the topological order, and decrement the in-degrees of its neighbors. Any neighbor whose in-degree becomes 0 is enqueued. If the final order contains fewer nodes than the graph, the graph contains a cycle.",
+    explanation: "A topological order lines up tasks so each task comes after its prerequisites. For example, install a tool before using it. Connections must have a direction (prerequisite → task), and the graph must have no loops. Such a graph is called a **directed acyclic graph (DAG)**.\n\nKahn's algorithm starts with tasks that have no remaining prerequisites. It adds one to the list, removes its outgoing connections, then adds any newly unblocked tasks. If some tasks are still blocked at the end, the graph contains a loop, so no valid order exists.",
     steps: [
-      "Initialize in-degree counts for all vertices to 0.",
-      "Traverse all edges to compute the correct in-degree for each vertex.",
-      "Initialize an empty Queue `Q` and an empty list `order`.",
-      "Enqueue all vertices with in-degree equal to 0.",
-      "While `Q` is not empty, dequeue a node `curr`:",
-      "Add `curr` to the `order` list.",
-      "For each outgoing edge from `curr` to neighbor `v`, decrement `in-degree[v]`.",
-      "If `in-degree[v]` becomes 0, enqueue `v`.",
-      "If the length of `order` is less than V, a cycle was detected (no topological order exists). Otherwise, return `order`."
+      "Count how many prerequisites point to each task.",
+      "Put every task with no prerequisites into a queue.",
+      "Take one ready task from the queue and add it to the result.",
+      "Remove that task's prerequisite links from the tasks that depend on it.",
+      "When a task has no prerequisites left, add it to the queue.",
+      "Repeat until no task is ready.",
+      "If every task was added, the result is a valid order. If not, some tasks depend on each other in a loop."
     ],
     pseudocode: `function KahnTopologicalSort(Graph):
     in_degree = array of size V, initialized to 0
@@ -359,10 +359,10 @@ function dfsHelper(node, visited, Graph):
     name: "Cycle Detection (Directed & Undirected)",
     category: "graphs",
     complexity: "O(V + E)",
-    summary: "Determine if a graph contains any cycles using DFS recursion states.",
+    summary: "Check whether following connections can lead back to a node already on the route.",
     timeComplexity: { best: "O(V + E)", average: "O(V + E)", worst: "O(V + E)" },
     spaceComplexity: "O(V) for recursion call stack and states",
-    explanation: "Cycle detection checks if there is any path that starts and ends at the same vertex. The implementation differs based on graph directionality:\n\n*   **Directed Graph**: We track nodes currently in the recursion call stack (active DFS path). If we find an edge pointing to a node already in the active recursion stack (a back-edge), a cycle exists.\n*   **Undirected Graph**: We traverse using DFS. If we encounter a visited node that is *not* the parent of the current node, a cycle exists.",
+    explanation: "A **cycle** is a route that returns to a node it has already reached. The check uses depth-first search, but the rule depends on whether connections have arrows:\n\n* **With directed edges**, a cycle exists if an arrow leads back to a node still on the current search route.\n* **Without directed edges**, seeing a visited neighbor means a cycle only when that neighbor is not the node we just came from. This parent check avoids mistaking the way back along the same connection for a cycle.\n\nThe search starts again at each unvisited node, so disconnected parts of the graph are checked too.",
     steps: [
       "**For Directed Graphs**:",
       "Maintain a `visited` set and a `recursionStack` set.",
@@ -422,17 +422,17 @@ function dfsUndirected(u, parent, visited, Graph):
     name: "Disjoint Set Union (DSU)",
     category: "graphs",
     complexity: "O(α(V))",
-    summary: "Manage partitioned disjoint sets with near-constant time Find and Union operations.",
+    summary: "Keep track of groups: check whether two items share a group or join their groups.",
     timeComplexity: { best: "O(α(V))", average: "O(α(V))", worst: "O(α(V)) where α is the Inverse Ackermann function" },
     spaceComplexity: "O(V) parent and rank arrays",
-    explanation: "Disjoint Set Union (DSU), also known as Union-Find, is a data structure that tracks elements split into several non-overlapping sets. It is highly optimized using two techniques:\n\n1.  **Path Compression**: Makes every node on the query path point directly to the root, speeding up subsequent lookups.\n2.  **Union by Rank/Size**: Attaches the smaller tree to the root of the larger tree, keeping the structure balanced.\n\nIt is used in cycle detection, Kruskal's algorithm, and dynamic connectivity problems.",
+    explanation: "Disjoint Set Union (DSU), also called **Union-Find**, keeps items in separate groups. It answers two questions: “Which group is this item in?” (**Find**) and “Join these two groups” (**Union**).\n\nEach group is represented by one root item. To keep lookups fast, DSU uses two shortcuts: **path compression** makes items point closer to the root after a lookup, and **union by size/rank** attaches the smaller group under the larger one.\n\nIt is useful when connections are added over time, such as checking whether a new edge would join nodes that are already connected.",
     steps: [
-      "Initialize arrays `parent` and `rank` of size V.",
-      "**MakeSet**: Set `parent[i] = i` and `rank[i] = 0` for all elements.",
-      "**Find(i)**: Traverse parent pointers recursively to find the representative root of `i`. During backtracking, set `parent[i] = root` (Path Compression).",
-      "**Union(i, j)**: Find the roots of both items: `root_i = Find(i)`, `root_j = Find(j)`.",
-      "If the roots are different, check ranks: Attach the root with the lower rank under the root with the higher rank.",
-      "If ranks are equal, attach one arbitrarily and increment its rank by 1."
+      "Start with every item in its own group.",
+      "To find an item's group, follow its parent links until you reach the group's representative.",
+      "Shorten the route by connecting items closer to the representative.",
+      "To join two groups, first find their representatives.",
+      "If the representatives are already the same, the items are already in one group.",
+      "Otherwise, connect the smaller group under the larger group."
     ],
     pseudocode: `class DSU:
     parent = array of size V
@@ -471,10 +471,10 @@ function dfsUndirected(u, parent, visited, Graph):
     name: "Kruskal's MST Algorithm",
     category: "graphs",
     complexity: "O(E log E)",
-    summary: "Greedily construct a Minimum Spanning Tree by sorting edges and using DSU.",
+    summary: "Connect all nodes as cheaply as possible, adding the lightest safe edge first.",
     timeComplexity: { best: "O(E log E)", average: "O(E log E)", worst: "O(E log E) or O(E log V)" },
     spaceComplexity: "O(V + E) for DSU and sorting data",
-    explanation: "Kruskal's Algorithm is a greedy approach to find the Minimum Spanning Tree (MST) of a connected, weighted graph. It sorts all edges by weight, then iterates through them, adding each edge to the MST as long as it does not form a cycle with already selected edges. Cycle detection is performed in near-constant time using a Disjoint Set Union (DSU) data structure.",
+    explanation: "Kruskal's algorithm finds a **minimum spanning tree**: the cheapest set of edges that connects every node without making a cycle. It applies to an undirected graph with edge costs.\n\nFirst, sort all edges from cheapest to most expensive. Then consider them in that order. Keep an edge if it connects two groups that are not connected yet; skip it if it would create a loop. DSU helps check this quickly. A connected graph's spanning tree has exactly one fewer edge than nodes. If the graph is disconnected, the same process gives a minimum spanning forest instead.",
     steps: [
       "Initialize an empty list `MST`.",
       "Create a DSU structure for all vertices in the graph.",
@@ -508,10 +508,10 @@ function dfsUndirected(u, parent, visited, Graph):
     name: "Prim's MST Algorithm",
     category: "graphs",
     complexity: "O(E log V)",
-    summary: "Build a Minimum Spanning Tree growing from a starting vertex, selecting minimum weight cut edges.",
+    summary: "Grow a cheapest connecting tree from one node, choosing the lowest-cost link next.",
     timeComplexity: { best: "O(E log V)", average: "O(E log V)", worst: "O(E log V) using a binary heap" },
     spaceComplexity: "O(V) key and parent tables",
-    explanation: "Prim's Algorithm is a greedy algorithm that builds the Minimum Spanning Tree (MST) one node at a time. Starting from an arbitrary root node, it expands the MST set by repeatedly adding the cheapest edge that connects a vertex in the MST to a vertex outside the MST. It is implemented efficiently using a Priority Queue (Min-Heap) to extract the minimum cut edge.",
+    explanation: "Prim's algorithm builds a **minimum spanning tree** by growing one connected group. Start at any node. Each time, choose the cheapest edge that reaches a node outside the group, then add that node. Stop when every node is included.\n\nThe result connects all nodes with the lowest possible total edge cost and no cycles. This version assumes the graph is undirected and connected. A priority queue helps quickly choose the cheapest next edge.",
     steps: [
       "Initialize arrays `key` of size V (filled with infinity) and `parent` (filled with null).",
       "Set `key[start] = 0`.",
@@ -552,10 +552,10 @@ function dfsUndirected(u, parent, visited, Graph):
     name: "Dijkstra's Shortest Path",
     category: "graphs",
     complexity: "O((V + E) log V)",
-    summary: "Compute the shortest paths from a single source to all nodes in a graph with non-negative edge weights.",
+    summary: "Find the cheapest route from one starting node when edge costs are not negative.",
     timeComplexity: { best: "O((V + E) log V)", average: "O((V + E) log V)", worst: "O((V + E) log V) with binary heap" },
     spaceComplexity: "O(V) distance and predecessor arrays",
-    explanation: "Dijkstra's Algorithm solves the single-source shortest path problem on graphs with non-negative edge weights. It works by keeping track of the shortest known distance from the source to every other node. It greedily selects the unvisited node with the smallest tentative distance, marks it as finalized, and relaxes all of its outgoing edges.",
+    explanation: "Dijkstra's algorithm finds the cheapest route from one starting node to every other reachable node. Each connection can have a cost, such as distance or time, but the costs must be **zero or positive**. Negative costs can make Dijkstra give the wrong answer.\n\nThe algorithm keeps the best route found so far to each node. It repeatedly picks the reachable node with the smallest known cost, then checks whether going through it gives a cheaper route to its neighbors. If so, it updates those routes.",
     steps: [
       "Initialize an array `dist` of size V filled with infinity, and `dist[source] = 0`.",
       "Initialize an array `parent` of size V filled with null.",
@@ -594,10 +594,10 @@ function dfsUndirected(u, parent, visited, Graph):
     name: "Bellman-Ford Shortest Path",
     category: "graphs",
     complexity: "O(V * E)",
-    summary: "Compute shortest paths from a single source, allowing negative edge weights and detecting negative cycles.",
+    summary: "Find cheapest routes with negative edge costs and detect reachable negative-cost loops.",
     timeComplexity: { best: "O(E)", average: "O(V * E)", worst: "O(V * E)" },
     spaceComplexity: "O(V) distance array",
-    explanation: "The Bellman-Ford Algorithm computes single-source shortest paths on weighted graphs. Unlike Dijkstra's algorithm, Bellman-Ford supports **negative edge weights**. It repeatedly relaxes all edges in the graph $V-1$ times. Since the longest simple path in a graph contains at most $V-1$ edges, all shortest distances are guaranteed to be finalized after $V-1$ rounds. A final ($V$-th) round of relaxations is performed to check for negative-weight cycles; if any distance decreases, a negative cycle exists.",
+    explanation: "Bellman-Ford finds the cheapest routes from one starting node. Unlike Dijkstra's algorithm, it can handle edges with negative costs.\n\nIt makes repeated passes over every edge, improving a route whenever it finds a cheaper way to reach the next node. After at most `number of nodes − 1` passes, the best routes are known if there is no reachable negative-cost loop. One extra pass checks for such a loop: if a route can still get cheaper, no finite cheapest route exists for the affected nodes.",
     steps: [
       "Initialize an array `dist` of size V filled with infinity, and `dist[source] = 0`.",
       "Perform $V-1$ iterations. In each iteration, relax all edges in the graph:",
@@ -632,10 +632,10 @@ function dfsUndirected(u, parent, visited, Graph):
     name: "Kosaraju's SCC Algorithm",
     category: "graphs",
     complexity: "O(V + E)",
-    summary: "Identify Strongly Connected Components in a directed graph using two DFS passes.",
+    summary: "Group nodes when each node in a group can follow arrows to reach every other one.",
     timeComplexity: { best: "O(V + E)", average: "O(V + E)", worst: "O(V + E)" },
     spaceComplexity: "O(V + E) for transposed graph and stack",
-    explanation: "Kosaraju's Algorithm finds the Strongly Connected Components (SCCs) of a directed graph. An SCC is a maximal subgraph where every vertex is reachable from any other vertex in the subgraph.\n\nIt performs two DFS passes:\n1.  **First DFS**: Computes the finishing order of vertices on the original graph and pushes them to a stack.\n2.  **Transpose Graph**: Reverses the directions of all edges.\n3.  **Second DFS**: Processes nodes in order of decreasing finishing times (popped from the stack) on the transposed graph. Each tree generated in this forest forms a separate SCC.",
+    explanation: "Kosaraju's algorithm finds **strongly connected components** in a directed graph. A component is a group where every node can follow arrows to reach every other node in that group.\n\nIt makes two depth-first searches. The first records nodes after all their reachable neighbors have been explored. Then the algorithm reverses every arrow and explores nodes in the recorded order, starting with the ones that finished last. Each new search collects one component. Reversing the arrows helps keep each group separate.",
     steps: [
       "Initialize an empty stack `S` and a `visited` set.",
       "For each node, if unvisited, run `DFS1(node)` which recursively visits neighbors and pushes `node` to `S` only after processing all neighbors.",
@@ -688,10 +688,10 @@ function dfs2(u, visited, sccList, transposedGraph):
     name: "Tarjan's Bridges & Articulation Points",
     category: "graphs",
     complexity: "O(V + E)",
-    summary: "Identify critical edges (bridges) and nodes (articulation points) in a single DFS pass.",
+    summary: "Find links and nodes whose removal would split an undirected network apart.",
     timeComplexity: { best: "O(V + E)", average: "O(V + E)", worst: "O(V + E)" },
     spaceComplexity: "O(V) for discovery and low arrays",
-    explanation: "Tarjan's Bridge and Articulation Point algorithms identify critical components in a graph:\n\n*   **Bridge**: An edge whose removal increases the number of connected components.\n*   **Articulation Point (Cut Vertex)**: A vertex whose removal increases the number of connected components.\n\nIt performs a single DFS pass, maintaining two values for each node: `dfn[u]` (discovery time when visited) and `low[u]` (lowest discovery time reachable from `u` using at most one back-edge). An edge `(u, v)` is a bridge if `low[v] > dfn[u]`, meaning there is no alternative path back to `u` or its ancestors from `v`'s subtree.",
+    explanation: "This search finds weak spots in an undirected network. A **bridge** is a connection whose removal splits one connected area into two. An **articulation point** is a node whose removal splits the area.\n\nDuring one depth-first search, each node records when it was first reached and the earliest visited node its branch can get back to using another connection. If a child branch cannot get back to its parent or any earlier node, their connecting edge is a bridge. A parent is an articulation point when a child branch cannot get around it. The root has a special rule: it is an articulation point only if it has more than one DFS child.",
     steps: [
       "Initialize `dfn` (discovery time) and `low` arrays with 0, and a global `timer = 0`.",
       "Initialize empty lists/sets for `bridges` and `articulationPoints`.",
