@@ -420,12 +420,16 @@ export default function GraphVisualizer() {
       ctx.font = `normal ${11 * s}px sans-serif`;
       const txtW = ctx.measureText(text).width;
 
-      ctx.fillStyle = "rgba(30, 30, 30, 0.9)";
+      ctx.fillStyle = "#fffdf6";
       ctx.beginPath();
       ctx.roundRect(midX - txtW / 2 - 4 * s, midY - 6 * s - 2, txtW + 8 * s, 14 * s, 5 * s);
       ctx.fill();
 
-      ctx.fillStyle = "#D0D0D0";
+      ctx.strokeStyle = "#171717";
+      ctx.lineWidth = 1 * s;
+      ctx.stroke();
+
+      ctx.fillStyle = "#171717";
       ctx.textBaseline = "middle";
       ctx.textAlign = "center";
       ctx.fillText(text, midX, midY);
@@ -452,30 +456,11 @@ export default function GraphVisualizer() {
         nodeColor = { fill: node.colorOverride, border: "#111" };
       }
 
-      // Reset shadow state before each node
+      // Keep nodes flat and outlined to match the neo-brutalist interface.
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
 
-      if (node.state !== NodeState.UNVISITED) {
-        ctx.shadowColor = nodeColor.fill;
-        ctx.shadowBlur = 22 * s;
-      }
-
       const r = 22 * s;
-
-      // Extra outer bloom halo for the actively-processed node (AlgoVisual look)
-      if (node.state === NodeState.CURRENT || node.state === NodeState.IN_PATH) {
-        ctx.save();
-        ctx.shadowColor = nodeColor.fill;
-        ctx.shadowBlur = 32 * s;
-        ctx.strokeStyle = nodeColor.border;
-        ctx.lineWidth = 2 * s;
-        ctx.globalAlpha = 0.85;
-        ctx.beginPath();
-        ctx.arc(x, y, r + 5 * s, 0, 2 * Math.PI);
-        ctx.stroke();
-        ctx.restore();
-      }
 
       // Solid filled circle
       ctx.fillStyle = nodeColor.fill;
@@ -499,11 +484,11 @@ export default function GraphVisualizer() {
         const dfnVal = dfnMap.get(node.id);
         const lowVal = lowMap.get(node.id);
         const badgeStr = `${dfnVal}/${lowVal}`;
-        ctx.fillStyle = "rgba(10, 10, 10, 0.9)";
+        ctx.fillStyle = "#fffdf6";
         ctx.beginPath();
         ctx.roundRect(x - 18 * s, y + 25 * s, 36 * s, 12 * s, 4 * s);
         ctx.fill();
-        ctx.fillStyle = "#fb7185";
+        ctx.fillStyle = "#171717";
         ctx.font = `bold ${9 * s}px monospace`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -519,7 +504,7 @@ export default function GraphVisualizer() {
         const labelX = x;
         const labelY = y - 30 * s;
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillStyle = "#fffdf6";
         ctx.beginPath();
         ctx.roundRect(labelX - labelW / 2 - 4 * s, labelY - 6 * s, labelW + 8 * s, 13 * s, 3 * s);
         ctx.fill();
@@ -531,7 +516,7 @@ export default function GraphVisualizer() {
       }
 
       // Node value label
-      const textColor = node.state === NodeState.SPECIAL ? "#1a1a1a" : "#ffffff";
+      const textColor = node.colorOverride ? "#fffdf6" : "#171717";
       ctx.fillStyle = textColor;
       ctx.font = `bold ${13 * s}px sans-serif`;
       ctx.textAlign = "center";
@@ -924,6 +909,10 @@ export default function GraphVisualizer() {
   return (
     <>
     <VisualizerWorkspace
+      className="graph-workbench"
+      leftClassName="graph-controls"
+      centerClassName="graph-stage"
+      rightClassName="graph-inspector"
       left={
         <>
         {/* Toggle directed/undirected Graph type */}
@@ -1108,19 +1097,19 @@ export default function GraphVisualizer() {
           </h2>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("UNVISITED") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#6B7280] border border-[#9CA3AF]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#fffdf6] border border-[#171717]" />
               <span className="text-slate-400 font-medium">Unvisited</span>
             </div>
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("CURRENT") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#06B6D4] border border-[#67E8F9] shadow-[0_0_6px_#06B6D4]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#ffdf3e] border border-[#171717]" />
               <span className="text-slate-400 font-medium">Current</span>
             </div>
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("VISITED") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] border border-[#86EFAC] shadow-[0_0_6px_#22C55E]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#a9d4bb] border border-[#171717]" />
               <span className="text-slate-400 font-medium">Visited</span>
             </div>
             <div className={`flex items-center gap-2 transition-opacity duration-300 ${activeLegendStates.has("IN_PATH") ? "opacity-100" : "opacity-25"}`}>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] border border-[#FDBA74] shadow-[0_0_6px_#F97316]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#ed8068] border border-[#171717]" />
               <span className="text-slate-400 font-medium">Final Path</span>
             </div>
           </div>
@@ -1149,19 +1138,6 @@ export default function GraphVisualizer() {
               display={`${getSpeedLabel(speedMs)} · ${speedMs}ms`}
               leftHint="Fast"
               rightHint="Slow"
-            />
-            <ParamSlider
-              label="Node & label size"
-              value={dimensionScale * 100}
-              min={DIM_MIN * 100}
-              max={DIM_MAX * 100}
-              step={DIM_STEP * 100}
-              onChange={(v) => setDimensionScale(clampDim(v / 100))}
-              display={formatDim(dimensionScale)}
-              leftHint="Small"
-              rightHint="Large"
-              onDec={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
-              onInc={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
             />
           </ParamPanel>
         </>

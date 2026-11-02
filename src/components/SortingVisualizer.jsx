@@ -259,10 +259,10 @@ export default function SortingVisualizer() {
   };
 
   return (
-    <div className="bg-bp-950 min-h-[calc(100vh-130px)] p-4 md:p-6 font-sans">
+    <div className="sorting-workbench bg-bp-950 min-h-[calc(100vh-130px)] p-4 md:p-6 font-sans">
       <div className="max-w-7xl mx-auto w-full flex flex-col gap-4">
         {/* Top Controls Bar */}
-        <div className="flex flex-wrap items-center gap-3 bg-bp-900 border border-bp-800 rounded-lg p-3 shadow-sm">
+        <div className="sorting-controls flex flex-wrap items-center gap-3 bg-bp-900 border border-bp-800 rounded-lg p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <ArrowUpDown size={14} className="text-slate-400" />
             <select
@@ -327,9 +327,9 @@ export default function SortingVisualizer() {
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-col xl:flex-row gap-4">
+        <div className="sorting-content flex flex-col xl:flex-row gap-4">
           {/* Left: Array Display + Playback + Logs */}
-          <div ref={containerRef} className="flex-1 flex flex-col gap-3 min-w-0">
+          <div ref={containerRef} className="sorting-stage flex-1 flex flex-col gap-3 min-w-0">
             {/* Algorithm Banner */}
             <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -552,7 +552,7 @@ export default function SortingVisualizer() {
           </div>
 
           {/* Right: Code Panel + Legend */}
-          <div className="xl:w-[380px] flex-shrink-0 flex flex-col gap-3">
+          <div className="sorting-inspector xl:w-[380px] flex-shrink-0 flex flex-col gap-3">
             <CodePanel
               algorithm={algorithm}
               currentLine={currentCodeLine}

@@ -178,7 +178,7 @@ export default function LinkedListVisualizer() {
     }
 
     if (displayNodes.length === 0) {
-      ctx.fillStyle = "#6B7280";
+      ctx.fillStyle = "#59574f";
       ctx.font = "14px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -196,14 +196,14 @@ export default function LinkedListVisualizer() {
     if (lastNode && (lastNode.nextId === null || lastNode.nextId === undefined)) {
       const nullX = lastNode.x + rw / 2 + 30;
       const nullY = lastNode.y;
-      ctx.strokeStyle = "#4b5563";
+      ctx.strokeStyle = "#39372f";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(lastNode.x + rw / 2, lastNode.y);
       ctx.lineTo(nullX, nullY);
       ctx.stroke();
-      drawArrowhead(ctx, lastNode.x + rw / 2, lastNode.y, nullX, nullY, "#4b5563");
-      ctx.fillStyle = "#6b7280";
+      drawArrowhead(ctx, lastNode.x + rw / 2, lastNode.y, nullX, nullY, "#39372f");
+      ctx.fillStyle = "#59574f";
       ctx.font = "bold 10px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -232,23 +232,23 @@ export default function LinkedListVisualizer() {
       const isPrevNode = nodeLabel === "prev";
       const isNextNode = labels[nextNode.id] === "next";
 
-      let arrowColor = "#4b5563";
+      let arrowColor = "#39372f";
       let arrowWidth = 2;
       let arrowDash = [];
 
       if (action === "delete" && (deleteId === node.id || deleteId === nextNode.id)) {
-        arrowColor = "#f85149";
+        arrowColor = "#ed8068";
         arrowWidth = 3;
         arrowDash = [6, 4];
       } else if (action === "relink" && isPrevNode && isNextNode) {
-        arrowColor = "#22c55e";
+        arrowColor = "#568b68";
         arrowWidth = 3;
       } else if (action === "relink" && isTempNode) {
-        arrowColor = "#f85149";
+        arrowColor = "#ed8068";
         arrowWidth = 2;
         arrowDash = [4, 4];
       } else if (action === "delete" && isTempNode) {
-        arrowColor = "#f85149";
+        arrowColor = "#ed8068";
         arrowWidth = 3;
         arrowDash = [6, 4];
       }
@@ -258,9 +258,9 @@ export default function LinkedListVisualizer() {
 
       if (isCycleArrow) {
         const midY = node.y + rh / 2 + 40;
-        ctx.strokeStyle = arrowColor === "#22c55e" ? "#22c55e" : "#f59e0b";
-        ctx.lineWidth = arrowColor === "#22c55e" ? 3 : 2.5;
-        ctx.setLineDash(arrowColor === "#22c55e" ? [] : [6, 4]);
+        ctx.strokeStyle = arrowColor === "#568b68" ? "#568b68" : "#c39d18";
+        ctx.lineWidth = arrowColor === "#568b68" ? 3 : 2.5;
+        ctx.setLineDash(arrowColor === "#568b68" ? [] : [6, 4]);
         ctx.beginPath();
         ctx.moveTo(node.x + rw / 2, node.y + rh / 2);
         ctx.quadraticCurveTo(node.x + rw / 2, midY, (node.x + nextNode.x) / 2, midY);
@@ -268,7 +268,7 @@ export default function LinkedListVisualizer() {
         ctx.stroke();
         ctx.setLineDash([]);
         drawArrowhead(ctx, (node.x + nextNode.x) / 2, midY, nextNode.x - rw / 2, nextNode.y + rh / 2, ctx.strokeStyle);
-        ctx.fillStyle = "#f59e0b";
+        ctx.fillStyle = "#c39d18";
         ctx.font = "bold 10px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("cycle", (node.x + nextNode.x) / 2, midY + 14);
@@ -303,23 +303,23 @@ export default function LinkedListVisualizer() {
       const y = node.y - rh / 2;
 
       if (isDeleting) {
-        bgColor = "#7f1d1d"; borderColor = "#f85149"; textColor = "#fca5a5";
+        bgColor = "#ed8068"; borderColor = "#171717"; textColor = "#171717";
       } else if (isTemp) {
-        bgColor = "#431407"; borderColor = "#fb923c"; textColor = "#fdba74";
+        bgColor = "#f0c2a3"; borderColor = "#171717"; textColor = "#171717";
       } else if (isTarget) {
-        bgColor = "#713f12"; borderColor = "#eab308"; textColor = "#fde047";
+        bgColor = "#c5b6e7"; borderColor = "#171717"; textColor = "#171717";
       } else if (isCurrent) {
-        bgColor = "#164e63"; borderColor = "#06b6d4"; textColor = "#67e8f9";
+        bgColor = "#ffdf3e"; borderColor = "#171717"; textColor = "#171717";
       } else if (isNewNode) {
-        bgColor = "#14532d"; borderColor = "#22c55e"; textColor = "#86efac";
+        bgColor = "#a9d4bb"; borderColor = "#171717"; textColor = "#171717";
       } else if (isHead || isTail) {
-        bgColor = "#1e1b4b"; borderColor = "#8b5cf6"; textColor = "#c4b5fd";
+        bgColor = "#c5b6e7"; borderColor = "#171717"; textColor = "#171717";
       } else {
-        bgColor = "#1f2937"; borderColor = "#4b5563"; textColor = "#e5e7eb";
+        bgColor = "#fffdf6"; borderColor = "#171717"; textColor = "#171717";
       }
 
-      ctx.shadowColor = isDeleting ? "#f85149" : isTemp ? "#fb923c" : isCurrent ? "#06b6d4" : isTarget ? "#eab308" : "transparent";
-      ctx.shadowBlur = isDeleting || isTemp || isCurrent || isTarget ? 10 : 0;
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
 
       ctx.fillStyle = bgColor;
       ctx.beginPath();
@@ -334,7 +334,7 @@ export default function LinkedListVisualizer() {
       ctx.stroke();
 
       if (isDeleting) {
-        ctx.strokeStyle = "#f85149";
+        ctx.strokeStyle = "#171717";
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(x + 4, y + 4);
@@ -360,22 +360,14 @@ export default function LinkedListVisualizer() {
         const labelX = node.x;
         const labelY = node.y - 34;
 
-        ctx.fillStyle = "rgba(0,0,0,0.75)";
+        ctx.fillStyle = "#fffdf6";
         ctx.beginPath();
         ctx.roundRect(labelX - labelW / 2 - 4, labelY - 5, labelW + 8, 15, 3);
         ctx.fill();
-
-        const labelColors = {
-          curr: "#67e8f9", slow: "#67e8f9", fast: "#fde047",
-          prev: "#fca5a5", next: "#86efac",
-          head: "#c4b5fd", tail: "#c4b5fd", "head/tail": "#c4b5fd",
-          target: "#fde047", found: "#fde047",
-          deleting: "#fca5a5", "new head": "#86efac",
-          newNode: "#86efac", middle: "#fde047",
-          "slow/fast": "#67e8f9",
-          temp: "#fb923c",
-        };
-        ctx.fillStyle = labelColors[label] || "#e5e7eb";
+        ctx.strokeStyle = "#171717";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = "#171717";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(label, labelX, labelY + 2);
@@ -591,10 +583,10 @@ export default function LinkedListVisualizer() {
   };
 
   return (
-    <div className="bg-bp-950 min-h-[calc(100vh-130px)] p-4 md:p-6 font-sans">
+    <div className="linked-list-workbench bg-bp-950 min-h-[calc(100vh-130px)] p-4 md:p-6 font-sans">
       <div className="max-w-7xl mx-auto w-full flex flex-col gap-4">
         {/* Top Controls Bar */}
-        <div className="flex flex-wrap items-center gap-3 bg-bp-900 border border-bp-800 rounded-lg p-3 shadow-sm">
+        <div className="linked-list-controls flex flex-wrap items-center gap-3 bg-bp-900 border border-bp-800 rounded-lg p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <ListOrdered size={14} className="text-slate-400" />
             <select
@@ -728,9 +720,9 @@ export default function LinkedListVisualizer() {
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-col xl:flex-row gap-4">
+        <div className="linked-list-content flex flex-col xl:flex-row gap-4">
           {/* Left: Canvas + Playback + Logs */}
-          <div ref={containerRef} className="flex-1 flex flex-col gap-3 min-w-0">
+          <div ref={containerRef} className="linked-list-stage flex-1 flex flex-col gap-3 min-w-0">
             {/* Algorithm Banner + Canvas */}
             <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -836,7 +828,7 @@ export default function LinkedListVisualizer() {
           </div>
 
           {/* Right: Code Panel + Legend */}
-          <div className="xl:w-[380px] flex-shrink-0 flex flex-col gap-3">
+          <div className="linked-list-inspector xl:w-[380px] flex-shrink-0 flex flex-col gap-3">
             <CodePanel
               algorithm={algorithm}
               currentLine={currentCodeLine}
@@ -848,13 +840,13 @@ export default function LinkedListVisualizer() {
             <div className="bg-bp-900 border border-bp-800 rounded-lg p-3">
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
                 {[
-                  { dot: "bg-bp-800 border-bp-600", label: "Default" },
-                  { dot: "bg-cyan-900 border-cyan-500", label: "Current (curr/slow/fast)" },
-                  { dot: "bg-orange-900 border-orange-500", label: "Temp Pointer" },
-                  { dot: "bg-yellow-900 border-yellow-500", label: "Target / Found" },
-                  { dot: "bg-green-900 border-green-500", label: "New / Inserted" },
-                  { dot: "bg-red-900 border-red-500", label: "Deleted / Bypassed" },
-                  { dot: "bg-indigo-900 border-indigo-500", label: "Head / Tail" },
+                  { dot: "bg-[#fffdf6] border-[#171717]", label: "Default" },
+                  { dot: "bg-[#ffdf3e] border-[#171717]", label: "Current (curr/slow/fast)" },
+                  { dot: "bg-[#f0c2a3] border-[#171717]", label: "Temp Pointer" },
+                  { dot: "bg-[#c5b6e7] border-[#171717]", label: "Target / Found" },
+                  { dot: "bg-[#a9d4bb] border-[#171717]", label: "New / Inserted" },
+                  { dot: "bg-[#ed8068] border-[#171717]", label: "Deleted / Bypassed" },
+                  { dot: "bg-[#c5b6e7] border-[#171717]", label: "Head / Tail" },
                 ].map(({ dot, label }) => (
                   <div key={label} className="flex items-center gap-2">
                     <span className={`w-3 h-3 rounded border ${dot}`} />

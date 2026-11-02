@@ -166,30 +166,10 @@ export default function TreeVisualizer() {
     ctx.translate(cameraRef.current.x, cameraRef.current.y);
     ctx.scale(z, z);
 
-    // Infinite Grid (in world coordinates)
-    const gridSize = 40;
-    const startX = Math.floor(-cameraRef.current.x / z / gridSize) * gridSize;
-    const startY = Math.floor(-cameraRef.current.y / z / gridSize) * gridSize;
-    const endX = (-cameraRef.current.x) / z + w / z + gridSize;
-    const endY = (-cameraRef.current.y) / z + h / z + gridSize;
-
-    ctx.strokeStyle = "#30363d";
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    for (let x = startX; x < endX; x += gridSize) {
-      ctx.moveTo(x, startY);
-      ctx.lineTo(x, endY);
-    }
-    for (let y = startY; y < endY; y += gridSize) {
-      ctx.moveTo(startX, y);
-      ctx.lineTo(endX, y);
-    }
-    ctx.stroke();
-
     const { nodes, edges } = bstRef.current.getFlatNodesAndEdges();
 
     // Draw Edges
-    ctx.strokeStyle = "#484f58";
+    ctx.strokeStyle = "#39372f";
     ctx.lineWidth = 2.5 * s;
     for (const edge of edges) {
       ctx.beginPath();
@@ -213,16 +193,16 @@ export default function TreeVisualizer() {
       const isQueued = queuedNodeIds.has(node.id) && !isCurrentlyActive && !isHighlighted;
 
       // State-driven palette
-      let fill, border, textColor, glowColor;
+      let fill, border, textColor;
 
       if (isCurrentlyActive) {
-        fill = "#06B6D4"; border = "#67E8F9"; textColor = "#ffffff"; glowColor = "#06B6D4";
+        fill = "#ffdf3e"; border = "#171717"; textColor = "#171717";
       } else if (isHighlighted) {
-        fill = "#22C55E"; border = "#86EFAC"; textColor = "#ffffff"; glowColor = "#22C55E";
+        fill = "#a9d4bb"; border = "#171717"; textColor = "#171717";
       } else if (isQueued) {
-        fill = "#8B5CF6"; border = "#C4B5FD"; textColor = "#ffffff"; glowColor = "#8B5CF6";
+        fill = "#c5b6e7"; border = "#171717"; textColor = "#171717";
       } else {
-        fill = "#6B7280"; border = "#9CA3AF"; textColor = "#ffffff"; glowColor = null;
+        fill = "#fffdf6"; border = "#171717"; textColor = "#171717";
       }
 
       const r = 20 * s;
@@ -230,12 +210,6 @@ export default function TreeVisualizer() {
       // Reset shadow state before each node
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
-
-      // Glow for active states
-      if (glowColor) {
-        ctx.shadowColor = glowColor;
-        ctx.shadowBlur = 12 * s;
-      }
 
       // Solid filled circle
       ctx.fillStyle = fill;
@@ -267,12 +241,15 @@ export default function TreeVisualizer() {
         const labelX = node.x;
         const labelY = node.y - 28 * s;
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillStyle = "#fffdf6";
         ctx.beginPath();
         ctx.roundRect(labelX - labelW / 2 - 4 * s, labelY - 6 * s, labelW + 8 * s, 13 * s, 3 * s);
         ctx.fill();
+        ctx.strokeStyle = "#171717";
+        ctx.lineWidth = 1 * s;
+        ctx.stroke();
 
-        ctx.fillStyle = border;
+        ctx.fillStyle = "#171717";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(stateLabel, labelX, labelY);
@@ -697,9 +674,9 @@ export default function TreeVisualizer() {
   })();
 
   return (
-    <div className="bg-bp-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
+    <div className="tree-workbench bg-bp-950 min-h-[calc(100vh-68px)] flex flex-col lg:flex-row p-4 gap-4 overflow-hidden select-none font-sans">
       {/* Sidebar Panel */}
-      <aside className="w-full lg:w-[300px] xl:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1 min-w-0">
+      <aside className="tree-controls w-full lg:w-[300px] xl:w-[320px] flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-100px)] flex-shrink-0 pr-1 min-w-0">
         
         {/* BST Key Controls Card */}
         <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
@@ -896,39 +873,6 @@ export default function TreeVisualizer() {
           </div>
         </div>
 
-        {/* Display Size Controls */}
-        <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
-          <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Node &amp; label size</label>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setDimensionScale((v) => clampDim(v - DIM_STEP))}
-              disabled={dimensionScale <= DIM_MIN + 1e-6}
-              title="Decrease size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-800 hover:bg-bp-750 disabled:opacity-30 disabled:hover:bg-bp-800 text-slate-200 cursor-pointer transition duration-200 rounded-md border border-bp-700"
-            >
-              <Minus size={13} />
-            </button>
-            <input
-              type="range"
-              min={DIM_MIN * 100}
-              max={DIM_MAX * 100}
-              step={DIM_STEP * 100}
-              value={dimensionScale * 100}
-              onChange={(e) => setDimensionScale(clampDim(parseInt(e.target.value, 10) / 100))}
-              className="flex-1 h-1 bg-bp-800 appearance-none cursor-pointer accent-accent"
-            />
-            <button
-              onClick={() => setDimensionScale((v) => clampDim(v + DIM_STEP))}
-              disabled={dimensionScale >= DIM_MAX - 1e-6}
-              title="Increase size"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center bg-bp-800 hover:bg-bp-750 disabled:opacity-30 disabled:hover:bg-bp-800 text-slate-200 cursor-pointer transition duration-200 rounded-md border border-bp-700"
-            >
-              <Plus size={13} />
-            </button>
-            <span className="bg-bp-950 border border-bp-700 px-2 py-0.5 rounded text-accent tabular-nums text-[10px] font-bold">{formatDim(dimensionScale)}</span>
-          </div>
-        </div>
-
         {/* Playback Progress Slider */}
         <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm mb-2">
           <label className="text-[10px] font-bold text-slate-400 tracking-wider uppercase flex items-center justify-between">
@@ -984,10 +928,10 @@ export default function TreeVisualizer() {
           </h2>
           <div className="grid grid-cols-2 gap-2 text-[10px]">
             {[
-              { state: "unvisited", label: "Unvisited", color: "bg-[#6B7280] border border-[#9CA3AF]" },
-              { state: "queued", label: "In Queue/Stack", color: "bg-[#8B5CF6] border border-[#C4B5FD]" },
-              { state: "current", label: "Current", color: "bg-[#06B6D4] border border-[#67E8F9]" },
-              { state: "visited", label: "Visited", color: "bg-[#22C55E] border border-[#86EFAC]" },
+              { state: "unvisited", label: "Unvisited", color: "bg-[#fffdf6] border border-[#171717]" },
+              { state: "queued", label: "In Queue/Stack", color: "bg-[#c5b6e7] border border-[#171717]" },
+              { state: "current", label: "Current", color: "bg-[#ffdf3e] border border-[#171717]" },
+              { state: "visited", label: "Visited", color: "bg-[#a9d4bb] border border-[#171717]" },
             ].map(({ state, label, color }) => {
               const isActive = activeLegendStates.has(state);
               return (
@@ -1002,11 +946,11 @@ export default function TreeVisualizer() {
       </aside>
 
       {/* Main Canvas & Separate Workspace for Tables/Results/Logs */}
-      <main className="flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 min-w-0">
+      <main className="tree-stage flex-grow flex flex-col gap-4 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 min-w-0">
         {/* Canvas + Code Panel row */}
-        <div className="flex flex-col lg:flex-row gap-4 min-w-0">
+        <div className="tree-canvas-code flex flex-col lg:flex-row gap-4 min-w-0">
           {/* Canvas panel */}
-          <div className="bg-bp-900 border border-bp-800 rounded-lg relative overflow-hidden shadow-inner flex flex-col justify-center items-center p-4 min-h-[300px] flex-1 min-w-0">
+          <div className="tree-canvas bg-bp-900 border border-bp-800 rounded-lg relative overflow-hidden shadow-inner flex flex-col justify-center items-center p-4 min-h-[300px] flex-1 min-w-0">
           {/* Step progress bar (Item 8) */}
           {isRunning && (
             <div className="absolute top-0 left-0 right-0 h-1 bg-bp-800 z-20">
@@ -1098,7 +1042,7 @@ export default function TreeVisualizer() {
         </div>
 
           {/* Code Panel */}
-          <div className="w-full lg:w-[300px] xl:w-[380px] lg:flex-shrink-0 h-[300px] lg:h-auto">
+          <div className="tree-code w-full lg:w-[300px] xl:w-[380px] lg:flex-shrink-0 h-[300px] lg:h-auto">
             <CodePanel
               algorithm={activeAlgorithm}
               traversalType={traversalType}
@@ -1129,7 +1073,7 @@ export default function TreeVisualizer() {
         </div>
 
         {/* Keyboard shortcuts hint (Item 7) */}
-        <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-bp-900 border border-bp-800 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
+        <div className="tree-shortcuts flex items-center justify-center gap-4 text-[9px] font-mono text-slate-500 bg-bp-900 border border-bp-800 rounded-lg px-3 py-1.5 flex-shrink-0 flex-wrap">
           <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">␣</kbd> Play/Pause</span>
           <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">←</kbd><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold ml-0.5">→</kbd> Step</span>
           <span><kbd className="bg-bp-800 border border-bp-700 px-1.5 py-0.5 rounded text-slate-400 font-bold">R</kbd> Reset</span>
@@ -1139,7 +1083,7 @@ export default function TreeVisualizer() {
 
         {/* Dedicated Space for Tables and Results */}
         {(activeAlgorithm === "height" || activeAlgorithm === "lifting" || activeAlgorithm === "traversals" || activeAlgorithm === "bfs") && (
-          <div className="bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
+          <div className="tree-results bg-bp-900 border border-bp-800 rounded-lg p-4 flex flex-col gap-3 shadow-sm">
             <h3 className="text-xs font-bold text-slate-400 tracking-wider uppercase border-b border-bp-800 pb-2 flex items-center gap-1.5">
               <Table size={14} className="text-accent" />
               Algorithm Results & Analytics
@@ -1224,7 +1168,7 @@ export default function TreeVisualizer() {
         )}
 
         {/* Monospace Log */}
-        <div className="bg-bp-900 border border-bp-700 rounded-lg flex flex-col h-[180px] overflow-hidden shadow-sm flex-shrink-0">
+        <div className="tree-logs bg-bp-900 border border-bp-700 rounded-lg flex flex-col h-[180px] overflow-hidden shadow-sm flex-shrink-0">
           <div className="bg-bp-950 border-b border-bp-700 px-4 py-2 flex justify-between items-center">
             <h3 className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
               <Terminal size={13} className="text-accent" /> Live Tree Execution Log

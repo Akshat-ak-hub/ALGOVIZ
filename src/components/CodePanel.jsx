@@ -46,9 +46,9 @@ export default function CodePanel({ algorithm, traversalType, currentLine, title
   }, [currentLine]);
 
   return (
-    <div className="bg-bp-900 border border-bp-800 rounded-lg overflow-hidden flex flex-col h-full shadow-sm">
+    <div className="algo-code-panel bg-bp-900 border border-bp-800 rounded-lg overflow-hidden flex flex-col h-full shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between bg-bp-950 border-b border-bp-800 px-3 py-2 flex-shrink-0">
+      <div className="algo-code-header flex flex-col items-stretch gap-2 bg-bp-950 border-b border-bp-800 px-3 py-2 flex-shrink-0">
         <div className="flex items-center gap-2 text-slate-300">
           <Code2 size={13} className="text-accent" />
           <span className="text-[11px] font-bold uppercase tracking-wider">
@@ -56,14 +56,14 @@ export default function CodePanel({ algorithm, traversalType, currentLine, title
           </span>
         </div>
         {/* Language tabs */}
-        <div className="flex items-center gap-0.5 bg-bp-900 border border-bp-800 rounded-md p-0.5">
+        <div className="algo-code-languages flex items-center justify-around gap-1 bg-bp-900 border border-bp-800 rounded-md p-1">
           {LANGUAGES.map((l) => {
             const isActive = l.id === language;
             return (
               <button
                 key={l.id}
                 onClick={() => setLanguage(l.id)}
-                className={`relative px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors duration-200 cursor-pointer ${
+                className={`relative flex-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded transition-colors duration-200 cursor-pointer ${
                   isActive ? "text-accent" : "text-slate-500 hover:text-slate-300"
                 }`}
               >
@@ -82,7 +82,7 @@ export default function CodePanel({ algorithm, traversalType, currentLine, title
       </div>
 
       {/* Code */}
-      <div ref={containerRef} className="relative overflow-y-auto flex-grow px-3 py-2 font-mono text-[11px] leading-6">
+      <div ref={containerRef} className="relative overflow-auto flex-grow min-w-0 px-3 py-2 font-mono text-[11px] leading-6">
         <AnimatePresence mode="wait">
           <motion.pre
             key={`${language}-${algorithm}-${traversalType || ""}`}
