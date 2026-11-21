@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ALGOVIZ — Project Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #070a12;
+      --bg-surface: #0f1629;
+      --bg-card: #151e36;
+      --bg-card-hover: #1c2847;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(6, 182, 212, 0.35);
+      
+      --cyan: #06b6d4;
+      --cyan-light: #67e8f9;
+      --indigo: #6366f1;
+      --indigo-light: #818cf8;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --purple: #a855f7;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* TOP BAR & PROGRESS */
+    header.deck-header {
+      height: 54px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(15, 22, 41, 0.7);
+      backdrop-filter: blur(12px);
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-size: 1.15rem;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, var(--cyan), var(--indigo));
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .brand-title {
+      background: linear-gradient(to right, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .deck-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-icon {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: var(--cyan);
+    }
+
+    .btn-icon.active {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--cyan-light);
+      border-color: var(--cyan);
+    }
+
+    .progress-track {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--indigo));
+      width: 14.28%;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* SLIDE STAGE */
+    main.stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 48px 80px 48px;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1200px;
+      height: calc(100vh - 150px);
+      max-height: 720px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 44px 56px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 40px rgba(6, 182, 212, 0.04);
+      opacity: 0;
+      transform: scale(0.96) translateY(16px);
+      pointer-events: none;
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: text;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+      z-index: 10;
+    }
+
+    /* SLIDE TYPOGRAPHY */
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      width: fit-content;
+      margin-bottom: 12px;
+      background: rgba(6, 182, 212, 0.12);
+      color: var(--cyan-light);
+      border: 1px solid rgba(6, 182, 212, 0.25);
+    }
+
+    .slide-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 8px;
+    }
+
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+      max-width: 860px;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    /* GRIDS & CARDS */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 20px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .card-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .card p, .card li {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .card ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 8px;
+    }
+
+    .card li {
+      position: relative;
+      padding-left: 18px;
+      margin-bottom: 6px;
+    }
+
+    .card li::before {
+      content: "•";
+      position: absolute;
+      left: 4px;
+      color: var(--cyan);
+      font-weight: bold;
+    }
+
+    /* CODE & METRICS */
+    .code-box {
+      background: #090e1c;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+
+    .token-kw { color: #f43f5e; font-weight: 600; }
+    .token-fn { color: #60a5fa; }
+    .token-var { color: #67e8f9; }
+    .token-str { color: #34d399; }
+    .token-comment { color: #64748b; font-style: italic; }
+
+    .stat-badge {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: rgba(15, 22, 41, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+
+    .stat-number {
+      font-size: 1.85rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      background: linear-gradient(135deg, var(--cyan-light), var(--indigo-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    /* FOOTER BAR */
+    footer.deck-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(7, 10, 18, 0.9);
+      border-top: 1px solid var(--border-subtle);
+      backdrop-filter: blur(10px);
+      z-index: 40;
+    }
+
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .dots-container {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .dot:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    .dot.active {
+      width: 28px;
+      background: linear-gradient(90deg, var(--cyan), var(--indigo));
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-nav {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav:hover:not(:disabled) {
+      background: var(--bg-card-hover);
+      border-color: var(--cyan);
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* SPEAKER NOTES DRAWER */
+    .speaker-drawer {
+      position: fixed;
+      bottom: 60px;
+      right: 24px;
+      width: 420px;
+      max-height: 280px;
+      background: #0d1322;
+      border: 1px solid var(--cyan);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      padding: 16px 20px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .speaker-drawer.visible {
+      display: block;
+      animation: slideUp 0.2s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .speaker-drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* PRINT STYLES FOR PDF EXPORT */
+    @media print {
+      body {
+        overflow: visible;
+        background: #fff;
+        color: #000;
+        height: auto;
+      }
+      header.deck-header, footer.deck-footer, .speaker-drawer {
+        display: none !important;
+      }
+      main.stage {
+        padding: 0;
+        display: block;
+      }
+      .slide {
+        position: relative !important;
+        opacity: 1 !important;
+        transform: none !important;
+        page-break-after: always;
+        height: 100vh !important;
+        max-height: none !important;
+        max-width: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        color: #000 !important;
+      }
+      .slide-title, .brand-title, .stat-number {
+        -webkit-text-fill-color: initial !important;
+        color: #000 !important;
+      }
+      .card, .stat-badge, .code-box {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        color: #1e293b !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header class="deck-header">
+    <div class="brand">
+      <span class="brand-badge">ALGOVIZ</span>
+      <span class="brand-title">Interactive Algorithm Visualization Platform</span>
+    </div>
+
+    <div class="deck-controls">
+      <button class="btn-icon" id="btnNotes" title="Toggle Speaker Notes (S)">
+        <span>🎙️</span> Notes <span style="font-size: 0.7rem; opacity: 0.6;">(S)</span>
+      </button>
+      <button class="btn-icon" id="btnFullscreen" title="Toggle Fullscreen (F)">
+        <span>⛶</span> Fullscreen <span style="font-size: 0.7rem; opacity: 0.6;">(F)</span>
+      </button>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progressBar"></div>
+    </div>
+  </header>
+
+  <!-- STAGE WITH 7 SLIDES -->
+  <main class="stage">
+
+    <!-- SLIDE 1: TITLE & INTRO -->
+    <section class="slide active" data-slide="1">
+      <div>
+        <span class="slide-badge">Slide 01 • Introduction</span>
+        <h1 class="slide-title">ALGOVIZ</h1>
+        <p class="slide-subtitle">Interactive, Step-by-Step Visual Learning Platform for Data Structures & Algorithms</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="margin-bottom: 24px;">
+          <div class="card" style="border-left: 4px solid var(--cyan);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">💡</span>
+              <span>The Core Mission</span>
+            </div>
+            <p>Transforming complex, abstract algorithmic theory into tactile, observable, and intuitive mental models. Replacing passive reading with direct manipulation.</p>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--indigo);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--indigo-light);">⚡</span>
+              <span>Modern Engineering Stack</span>
+            </div>
+            <p>Built with <strong>React 19</strong>, <strong>Vite 8</strong>, <strong>Tailwind CSS v4</strong>, and <strong>Framer Motion 12</strong>. Powered by an in-house deterministic step generator.</p>
+          </div>
+        </div>
+
+        <div class="grid-4">
+          <div class="stat-badge">
+            <span class="stat-number">4</span>
+            <span class="stat-label">Core Visualizers</span>
+          </div>
+          <div class="stat-badge">
+            <span class="stat-number">100%</span>
+            <span class="stat-label">Deterministic Stepping</span>
+          </div>
+          <div class="stat-badge">
+            <span class="stat-number">60 FPS</span>
+            <span class="stat-label">Fluid Physics Motion</span>
+          </div>
+          <div class="stat-badge">
+            <span class="stat-number">0ms</span>
+            <span class="stat-label">Zero Backend Delay</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px; font-size: 0.8rem; color: var(--text-dim);">
+        <span>Presented by: Student / Developer</span>
+        <span>Computer Science • Capstone / Systems Project</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: PROBLEM & MOTIVATION -->
+    <section class="slide" data-slide="2">
+      <div>
+        <span class="slide-badge" style="background: rgba(244, 63, 94, 0.15); color: var(--rose); border-color: rgba(244, 63, 94, 0.3);">Slide 02 • Motivation</span>
+        <h2 class="slide-title">The Problem: Why DSA is Hard to Learn</h2>
+        <p class="slide-subtitle">Traditional learning mediums fail to bridge the cognitive divide between code syntax and memory mutation.</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-3" style="margin-bottom: 20px;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(244, 63, 94, 0.15); color: var(--rose);">📖</span>
+              <span>Static Textbooks</span>
+            </div>
+            <p>Textbooks show static code and isolated diagrams. Students struggle to visualize temporal state transitions, loop invariants, and pointer adjustments across time.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">🐛</span>
+              <span>Traditional Debuggers</span>
+            </div>
+            <p>IDEs step line-by-line but show raw variables, hex pointers, and array indices. They fail to convey high-level spatial topology in trees, graphs, or recursion stacks.</p>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(168, 85, 247, 0.15); color: var(--purple);">🎥</span>
+              <span>Pre-rendered Videos</span>
+            </div>
+            <p>YouTube lectures are purely passive. Students cannot test custom inputs, induce cycle traps, inspect edge cases, or adjust the pacing to their own learning speed.</p>
+          </div>
+        </div>
+
+        <div class="card" style="background: rgba(6, 182, 212, 0.08); border-color: var(--border-accent);">
+          <div class="card-header" style="color: var(--cyan-light);">
+            <span>🎯 The ALGOVIZ Solution</span>
+          </div>
+          <p>An interactive, real-time playground where every algorithm is an active simulation: live customizable graphs, step-by-step playback, synchronized line-by-line syntax highlighting, and instant visual verification.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span>Key Cognitive Gap: Abstract Syntax ⇄ Spatial Memory Execution</span>
+        <span>Target: CS Undergrads, Bootcampers & Self-Learners</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: SYSTEM ARCHITECTURE & TECH STACK -->
+    <section class="slide" data-slide="3">
+      <div>
+        <span class="slide-badge" style="background: rgba(99, 102, 241, 0.15); color: var(--indigo-light); border-color: rgba(99, 102, 241, 0.3);">Slide 03 • Engineering</span>
+        <h2 class="slide-title">System Architecture & Tech Stack</h2>
+        <p class="slide-subtitle">Clean separation between algorithm logic, timeline orchestration, and declarative UI rendering.</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <!-- Architecture Flow -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">🏛️</span>
+              <span>Architecture Pipeline</span>
+            </div>
+            <ul>
+              <li><strong>Pure ADT Models:</strong> <code>GraphModel</code>, <code>TreeModel</code>, and <code>LinkedListModel</code> manage abstract domain state cleanly outside React.</li>
+              <li><strong>Timeline Engine:</strong> Pre-computes immutable step snapshots with comparing indices, active pointers, and code-line mappings.</li>
+              <li><strong>Reactive View Layer:</strong> React 19 + Framer Motion consumes the current step index to render smooth 60 FPS transitions.</li>
+              <li><strong>Zero State Leakage:</strong> Reversing or speeding up playback never mutates or corrupts underlying algorithm data.</li>
+            </ul>
+          </div>
+
+          <!-- Tech Stack Breakdown -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">🛠️</span>
+              <span>Modern Toolchain</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px;">
+                <span style="font-weight: 600; color: #fff;">React 19 & Vite 8</span>
+                <span style="color: var(--cyan);">Core View & Fast Bundling</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px;">
+                <span style="font-weight: 600; color: #fff;">Tailwind CSS v4</span>
+                <span style="color: var(--cyan);">Dark Surface Design System</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 4px;">
+                <span style="font-weight: 600; color: #fff;">Framer Motion 12</span>
+                <span style="color: var(--cyan);">Physics Spring Animations</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span style="font-weight: 600; color: #fff;">Lucide & GFM</span>
+                <span style="color: var(--cyan);">Vector Icons & Theory Hub</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span>Design Pattern: Snapshot-Based Deterministic State Machine</span>
+        <span>Performance: 100% Client-Side In-Memory Execution</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: CORE VISUALIZER MODULES -->
+    <section class="slide" data-slide="4">
+      <div>
+        <span class="slide-badge">Slide 04 • Features</span>
+        <h2 class="slide-title">The Four Core Visualizer Modules</h2>
+        <p class="slide-subtitle">Four comprehensive visualization suites tackling key CS curriculum bottlenecks.</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-4">
+          <!-- Graph Visualizer -->
+          <div class="card" style="border-top: 3px solid var(--cyan);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">🕸️</span>
+              <span style="font-size: 0.95rem;">Graph Visualizer</span>
+            </div>
+            <ul>
+              <li><strong>Interactive Canvas:</strong> Click to add vertices, shift-drag to create weighted edges.</li>
+              <li><strong>Algorithms:</strong> Dijkstra, BFS, DFS, Bellman-Ford, Kruskal, Prim.</li>
+              <li><strong>Live Overlays:</strong> Distance priority table & execution log.</li>
+            </ul>
+          </div>
+
+          <!-- Tree Visualizer -->
+          <div class="card" style="border-top: 3px solid var(--emerald);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">🌲</span>
+              <span style="font-size: 0.95rem;">Tree Visualizer</span>
+            </div>
+            <ul>
+              <li><strong>Binary Search Trees:</strong> Dynamic insertion, search path, and deletion.</li>
+              <li><strong>Traversals:</strong> Preorder, Inorder, Postorder & Level-Order (BFS).</li>
+              <li><strong>Geometry:</strong> Collision-free recursive coordinate positioning.</li>
+            </ul>
+          </div>
+
+          <!-- Sorting Visualizer -->
+          <div class="card" style="border-top: 3px solid var(--amber);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">📊</span>
+              <span style="font-size: 0.95rem;">Sorting Visualizer</span>
+            </div>
+            <ul>
+              <li><strong>Classic & Divide-and-Conquer:</strong> Bubble, Selection, Insert, Merge, Quick, Heap.</li>
+              <li><strong>State Highlights:</strong> Comparing, swapping, pivot, and sorted partitions.</li>
+              <li><strong>Metrics:</strong> Live comparison & swap counters.</li>
+            </ul>
+          </div>
+
+          <!-- Linked List Visualizer -->
+          <div class="card" style="border-top: 3px solid var(--purple);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(168, 85, 247, 0.15); color: var(--purple);">🔗</span>
+              <span style="font-size: 0.95rem;">Linked Lists</span>
+            </div>
+            <ul>
+              <li><strong>List Flavors:</strong> Singly, Doubly, and Circular Linked Lists.</li>
+              <li><strong>Pointer Mutators:</strong> Insert, delete, and animated in-place reversal.</li>
+              <li><strong>Cycle Detection:</strong> Floyd's Tortoise and Hare visual simulation.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span>Coverage: Elementary through Advanced Data Structures</span>
+        <span>Modular: Easy to register new algorithms into registry</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: INTERACTIVE UX & SYNCHRONIZED EXECUTION -->
+    <section class="slide" data-slide="5">
+      <div>
+        <span class="slide-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border-color: rgba(16, 185, 129, 0.3);">Slide 05 • User Experience</span>
+        <h2 class="slide-title">Interactive UX & Synchronized Execution</h2>
+        <p class="slide-subtitle">The Synchronized Triad: Canvas, Code Panel, and Playback Controller executing in lockstep.</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">🎮</span>
+              <span>The Floating Playback Pill</span>
+            </div>
+            <p style="margin-bottom: 10px;">A sleek, non-intrusive floating control bar at bottom center providing fine-grained playback management:</p>
+            <ul>
+              <li><strong>Bi-directional Stepping:</strong> Step Forward or Step Backward one atomic action at a time.</li>
+              <li><strong>Continuous Speed Slider:</strong> 0.25x micro-stepping up to 5x rapid batch execution.</li>
+              <li><strong>Quick Reset:</strong> Instantly return to initial state or re-seed data.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(99, 102, 241, 0.15); color: var(--indigo-light);">💻</span>
+              <span>Synchronized Code Panel</span>
+            </div>
+            <div class="code-box">
+              <span class="token-kw">function</span> <span class="token-fn">dijkstra</span>(startNode) {<br>
+              &nbsp;&nbsp;dist[startNode] = <span class="token-var">0</span>;<br>
+              &nbsp;&nbsp;<span style="background: rgba(6, 182, 212, 0.25); border-left: 2px solid var(--cyan); display: inline-block; width: 100%;">&nbsp;&nbsp;<span class="token-kw">while</span> (!pq.isEmpty()) { <span class="token-comment">// ← ACTIVE STEP</span></span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;curr = pq.extractMin();<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;relaxEdges(curr);<br>
+              &nbsp;&nbsp;}
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--amber);">
+          <div class="card-header">
+            <span class="card-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--amber);">📚</span>
+            <span>Comprehensive Learn Page & Complexity Maps</span>
+          </div>
+          <p>Each algorithm is linked directly to a dedicated theory page featuring Big-O Time & Space Complexity cards (Best, Average, Worst), line-by-line algorithm descriptions, and real-world system applications.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span>UX Philosophy: Zero Cognitive Ambiguity</span>
+        <span>Accessibility: Colorblind-friendly palettes & keyboard ergonomics</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: ENGINEERING CHALLENGES & SOLUTIONS -->
+    <section class="slide" data-slide="6">
+      <div>
+        <span class="slide-badge" style="background: rgba(245, 158, 11, 0.15); color: var(--amber); border-color: rgba(245, 158, 11, 0.3);">Slide 06 • Deep Dive</span>
+        <h2 class="slide-title">Key Engineering Challenges Solved</h2>
+        <p class="slide-subtitle">Overcoming complex geometric, state management, and rendering challenges.</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2">
+          <!-- Challenge 1 -->
+          <div class="card">
+            <div class="card-header" style="color: var(--cyan-light);">
+              <span>1. Time-Travel Step Backwards</span>
+            </div>
+            <p><strong>Challenge:</strong> Traditional simulations mutate objects directly in loops, making "Undo" or stepping backwards impossible without full resets.</p>
+            <p style="margin-top: 8px;"><strong>Solution:</strong> Built an immutable snapshot generator. Algorithms pre-calculate full execution timelines. Stepping backwards is a simple <code>O(1)</code> index decrement: <code>currentStepIndex - 1</code>.</p>
+          </div>
+
+          <!-- Challenge 2 -->
+          <div class="card">
+            <div class="card-header" style="color: var(--indigo-light);">
+              <span>2. Antiparallel Graph Edge Routing</span>
+            </div>
+            <p><strong>Challenge:</strong> When two nodes have directed edges to each other (A ⇄ B), straight SVG lines overlap, obscuring arrows and edge weights.</p>
+            <p style="margin-top: 8px;"><strong>Solution:</strong> Formulated quadratic Bezier curves with orthogonal control point offsets. Arcs curve gracefully away from each other with centered weight badges.</p>
+          </div>
+
+          <!-- Challenge 3 -->
+          <div class="card">
+            <div class="card-header" style="color: var(--emerald);">
+              <span>3. Dynamic Tree Collision Avoidance</span>
+            </div>
+            <p><strong>Challenge:</strong> Fixed coordinate grid systems cause deep unbalanced binary trees to overlap sibling branches.</p>
+            <p style="margin-top: 8px;"><strong>Solution:</strong> Recursive spatial partitioning calculates bottom-up bounding boxes, guaranteeing optimal horizontal spacing regardless of tree depth.</p>
+          </div>
+
+          <!-- Challenge 4 -->
+          <div class="card">
+            <div class="card-header" style="color: var(--purple);">
+              <span>4. 60 FPS Animation Smoothness</span>
+            </div>
+            <p><strong>Challenge:</strong> Rapid timer events triggered heavy React re-renders, causing visual stuttering during high-speed sorting runs.</p>
+            <p style="margin-top: 8px;"><strong>Solution:</strong> Decoupled timer loops from the React reconciliation tree using mutable refs, GPU-accelerated CSS transforms, and memoized canvas layers.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span>Key Metrics: Zero Re-render Bottlenecks • Clean SVG Vector Geometry</span>
+        <span>Robustness: Zero external animation library dependencies required</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: IMPACT, DEMO & ROADMAP -->
+    <section class="slide" data-slide="7">
+      <div>
+        <span class="slide-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald); border-color: rgba(16, 185, 129, 0.3);">Slide 07 • Conclusion</span>
+        <h2 class="slide-title">Impact, Live Demo & Future Roadmap</h2>
+        <p class="slide-subtitle">Empowering learners today and expanding the visual education frontier tomorrow.</p>
+      </div>
+
+      <div class="slide-body">
+        <div class="grid-2" style="margin-bottom: 20px;">
+          <!-- Impact -->
+          <div class="card" style="border-left: 4px solid var(--emerald);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">📈</span>
+              <span>Demonstrated Educational Value</span>
+            </div>
+            <ul>
+              <li><strong>Ramp-Up Reduction:</strong> Bridges the gap between pseudocode and spatial intuition in minutes.</li>
+              <li><strong>Zero Friction:</strong> No terminal setup, no backend containers — runs instantly in any browser.</li>
+              <li><strong>Self-Paced:</strong> Empowers students to explore at their own learning speed with reversible steps.</li>
+            </ul>
+          </div>
+
+          <!-- Roadmap -->
+          <div class="card" style="border-left: 4px solid var(--cyan);">
+            <div class="card-header">
+              <span class="card-icon" style="background: rgba(6, 182, 212, 0.15); color: var(--cyan);">🚀</span>
+              <span>Future Roadmap</span>
+            </div>
+            <ul>
+              <li><strong>A* Pathfinding Grid:</strong> Interactive 2D obstacle drawing and maze generation algorithms.</li>
+              <li><strong>Dynamic Programming Hub:</strong> 2D table fill visualizers for Knapsack, LCS, and Edit Distance.</li>
+              <li><strong>User Code Sandbox:</strong> Browser-based Monaco editor to visualize student-written code.</li>
+              <li><strong>URL State Sharing:</strong> Permalinks for educators to share custom graph puzzles.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Callout Banner -->
+        <div class="card" style="text-align: center; background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(99, 102, 241, 0.12)); border-color: var(--border-accent); padding: 18px;">
+          <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; color: #fff;">Ready for Live Demonstration</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Thank you! We invite your questions and feedback.</p>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim); border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <span>ALGOVIZ: Open Source • Modern React 19 Architecture</span>
+        <span>Repository: Available on GitHub</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SPEAKER NOTES DRAWER -->
+  <aside class="speaker-drawer" id="speakerNotesDrawer">
+    <div class="speaker-drawer-header">
+      <span id="notesSlideTag">Slide 1 Notes</span>
+      <span style="font-size: 0.7rem; color: var(--text-muted); cursor: pointer;" onclick="toggleNotes()">✕ CLOSE</span>
+    </div>
+    <div id="notesContent" style="color: #cbd5e1; font-size: 0.85rem;">
+      <!-- Dynamically filled by JS -->
+    </div>
+  </aside>
+
+  <!-- BOTTOM FOOTER CONTROLS -->
+  <footer class="deck-footer">
+    <div class="slide-counter">
+      Slide <span id="currentSlideNum">1</span> / <span id="totalSlideNum">7</span>
+    </div>
+
+    <div class="dots-container" id="dotsContainer">
+      <!-- 7 dots created by JS -->
+    </div>
+
+    <div class="nav-buttons">
+      <button class="btn-nav" id="btnPrev" onclick="prevSlide()" disabled>
+        <span>←</span> Previous
+      </button>
+      <button class="btn-nav" id="btnNext" onclick="nextSlide()">
+        Next <span>→</span>
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    const speakerNotes = [
+      // Slide 1
+      "Good morning/afternoon everyone. Today, I'm excited to present ALGOVIZ, an interactive web-based algorithm and data structure visualizer. Anyone who has studied Computer Science knows that grasping how pointers rewire in a linked list, how recursion unfolds in a binary tree, or how distances relax in Dijkstra's algorithm from textbook pseudocode can be frustratingly abstract. ALGOVIZ solves this by replacing passive reading with an active, interactive sandbox.",
+      
+      // Slide 2
+      "To understand why ALGOVIZ was built, let's look at the underlying educational challenge. Textbooks are static and cannot show temporal changes. Debuggers in IDEs show raw variables, but completely miss spatial relationships in trees or graphs. Videos are passive; students cannot test their own custom inputs. ALGOVIZ bridges this cognitive gap by giving instant visual feedback for every code line.",
+      
+      // Slide 3
+      "Let's look at the software architecture. ALGOVIZ is built with React 19, Vite 8, Tailwind CSS v4, and Framer Motion. The central engineering innovation is our Decoupled Timeline Engine. Algorithms execute against pure ADT models and emit an array of immutable step snapshots. This guarantees zero UI lag and allows seamless bi-directional stepping forward and backward without state corruption.",
+      
+      // Slide 4
+      "ALGOVIZ contains four comprehensive visualizer modules: 1) Graph Visualizer with an interactive canvas for custom node/edge creation, Dijkstra, BFS, DFS, and MSTs. 2) Tree Visualizer with collision-free BST operations and Pre/In/Postorder traversals. 3) Sorting Visualizer with comparisons, swaps, pivot tracking, and a recursive Sort Tree. 4) Linked List Visualizer for Singly, Doubly, and Circular lists with pointer mutation animations and Floyd's cycle detection.",
+      
+      // Slide 5
+      "Our user experience centers around the Synchronized Triad: the Canvas, the Code Panel, and the Playback Controller. When you step through an algorithm, the visual nodes update, the plain-English log explains the operation, and the code panel highlights the exact corresponding line in real time. The floating pill bar gives the user effortless control over speed and direction.",
+      
+      // Slide 6
+      "We solved four key engineering hurdles: 1) Deterministic Time-Travel via pre-computed snapshot sequences. 2) Antiparallel Graph Edges via quadratic Bezier curves with trigonometric offset vectors. 3) Collision-free dynamic tree layout using recursive spatial partitioning. 4) 60 FPS animation smoothness by decoupling the timer loop from heavy React re-renders.",
+      
+      // Slide 7
+      "In conclusion, ALGOVIZ bridges the gap between algorithmic theory and intuitive visual mastery. It runs 100% in-browser with zero backend setup. In the future, we will add an A* pathfinding grid, Dynamic Programming table visualizers, a live code sandbox, and URL sharing for educators. Thank you for your time, and I look forward to your questions!"
+    ];
+
+    let currentSlide = 1;
+    const totalSlides = 7;
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('progressBar');
+    const currentSlideNum = document.getElementById('currentSlideNum');
+    const dotsContainer = document.getElementById('dotsContainer');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const notesDrawer = document.getElementById('speakerNotesDrawer');
+    const notesContent = document.getElementById('notesContent');
+    const notesSlideTag = document.getElementById('notesSlideTag');
+    const btnNotes = document.getElementById('btnNotes');
+
+    // Build dots
+    for (let i = 1; i <= totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.className = `dot ${i === 1 ? 'active' : ''}`;
+      dot.title = `Jump to Slide ${i}`;
+      dot.onclick = () => goToSlide(i);
+      dotsContainer.appendChild(dot);
+    }
+    const dots = document.querySelectorAll('.dot');
+
+    function updateSlide() {
+      slides.forEach((s, idx) => {
+        s.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      dots.forEach((d, idx) => {
+        d.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      currentSlideNum.textContent = currentSlide;
+      progressBar.style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+      btnPrev.disabled = currentSlide === 1;
+      btnNext.disabled = currentSlide === totalSlides;
+      btnNext.innerHTML = currentSlide === totalSlides ? 'Finished ✓' : 'Next <span>→</span>';
+
+      // Update speaker notes
+      notesSlideTag.textContent = `Slide ${currentSlide} Notes (${currentSlide}/${totalSlides})`;
+      notesContent.textContent = speakerNotes[currentSlide - 1];
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function goToSlide(n) {
+      if (n >= 1 && n <= totalSlides) {
+        currentSlide = n;
+        updateSlide();
+      }
+    }
+
+    function toggleNotes() {
+      notesDrawer.classList.toggle('visible');
+      btnNotes.classList.toggle('active', notesDrawer.classList.contains('visible'));
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => alert(err.message));
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    btnNotes.onclick = toggleNotes;
+    document.getElementById('btnFullscreen').onclick = toggleFullscreen;
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        goToSlide(1);
+      } else if (e.key === 'End') {
+        goToSlide(totalSlides);
+      } else if (e.key.toLowerCase() === 's') {
+        toggleNotes();
+      } else if (e.key.toLowerCase() === 'f') {
+        toggleFullscreen();
+      }
+    });
+
+    // Touch swipe support
+    let touchStartX = 0;
+    window.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, false);
+    window.addEventListener('touchend', (e) => {
+      let touchEndX = e.changedTouches[0].screenX;
+      if (touchEndX < touchStartX - 50) nextSlide();
+      if (touchEndX > touchStartX + 50) prevSlide();
+    }, false);
+
+    updateSlide();
+  </script>
+</body>
+</html>
