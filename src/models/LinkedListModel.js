@@ -20,7 +20,22 @@ export class ListNode {
   }
 }
 
-function snapshotData(nodesArray) {
+/**
+ * Snapshot the linked-list nodes into a plain-data array suitable for
+ * rendering.  Each entry carries position, value, and the ids of neighbours.
+ * An optional `layoutWidth` triggers a fresh horizontal layout pass so that
+ * every snapshot has correct screen-ready coordinates even when the list
+ * topology has just changed.
+ */
+function snapshotData(nodesArray, layoutWidth) {
+  if (layoutWidth) {
+    const totalWidth = nodesArray.length * 120 - 20;
+    const startX = Math.max(60, (layoutWidth - totalWidth) / 2);
+    nodesArray.forEach((n, i) => {
+      n.x = startX + i * 120;
+      n.y = 140;
+    });
+  }
   return nodesArray.map((n) => ({
     id: n.id,
     value: n.value,
@@ -61,35 +76,60 @@ export class LinkedListModel {
     this.clear();
     for (let i = 0; i < count; i++) {
       const val = Math.floor(Math.random() * 90) + 10;
-      this.insertAtTail(val, false);
+      this._rawInsertTail(val);
     }
     this.layout();
   }
 
+  /** Fast insert used only during random generation (no step recording). */
+  _rawInsertTail(value) {
+    const node = new ListNode(this.nodeCounter++, value);
+    if (!this.head) {
+      this.head = node;
+      this.tail = node;
+    } else {
+      this.tail.next = node;
+      node.prev = this.tail;
+      this.tail = node;
+    }
+  }
+
+  /**
+   * Build a snapshot step.  Every step now includes a fresh layout so that
+   * coordinates always match the current topology shown in nodesSnapshot.
+   */
   stepObj(extra) {
+    const nodes = this.getAllNodes();
     return {
-      nodesSnapshot: snapshotData(this.getAllNodes()),
+      nodesSnapshot: snapshotData(nodes, 900),
       ...extra,
     };
   }
 
-  // Custom snapshot that includes a detached node (for insert animations)
-  stepObjWith(extraNodes, extra) {
-    const allNodes = [...this.getAllNodes(), ...extraNodes];
+  /**
+   * Build a snapshot that also includes detached / not-yet-linked nodes
+   * (e.g. a newNode being inserted).  `extraNodes` are appended in display
+   * order so the layout positions them naturally.
+   */
+  stepObjWith(extraNodes, extra, { prepend = false } = {}) {
+    const listNodes = this.getAllNodes();
+    const allNodes = prepend
+      ? [...extraNodes, ...listNodes]
+      : [...listNodes, ...extraNodes];
     return {
-      nodesSnapshot: snapshotData(allNodes),
+      nodesSnapshot: snapshotData(allNodes, 900),
       ...extra,
     };
   }
 
-  insertAtHead(value, doLayout = true) {
+  // ─────────────── INSERT AT HEAD ───────────────
+  insertAtHead(value) {
     const node = new ListNode(this.nodeCounter++, value);
     const steps = [];
 
     if (!this.head) {
       this.head = node;
       this.tail = node;
-      if (doLayout) this.layout();
       steps.push(this.stepObj({
         description: `List was empty. Inserted ${value} as the head (and tail).`,
         codeLine: 3,
@@ -105,7 +145,7 @@ export class LinkedListModel {
       codeLine: 1,
       pointerLabels: { [node.id]: "newNode", [this.head.id]: "head" },
       action: "pointer",
-    }));
+    }, { prepend: true }));
 
     // Step 2: newNode->next = head
     node.next = this.head;
@@ -114,7 +154,7 @@ export class LinkedListModel {
       codeLine: 5,
       pointerLabels: { [node.id]: "newNode", [this.head.id]: "head" },
       action: "relink",
-    }));
+    }, { prepend: true }));
 
     // Step 3: head->prev = newNode
     this.head.prev = node;
@@ -123,11 +163,10 @@ export class LinkedListModel {
       codeLine: 6,
       pointerLabels: { [node.id]: "newNode", [this.head.id]: "head" },
       action: "relink",
-    }));
+    }, { prepend: true }));
 
     // Step 4: head = newNode
     this.head = node;
-    if (doLayout) this.layout();
     steps.push(this.stepObj({
       description: `head = newNode — head updated to ${value}. List: ${this.toArray().join(" → ")}`,
       codeLine: 7,
@@ -138,14 +177,14 @@ export class LinkedListModel {
     return steps;
   }
 
-  insertAtTail(value, doLayout = true) {
+  // ─────────────── INSERT AT TAIL ───────────────
+  insertAtTail(value) {
     const node = new ListNode(this.nodeCounter++, value);
     const steps = [];
 
     if (!this.head) {
       this.head = node;
       this.tail = node;
-      if (doLayout) this.layout();
       steps.push(this.stepObj({
         description: `List was empty. Inserted ${value} as the tail.`,
         codeLine: 3,
@@ -183,7 +222,6 @@ export class LinkedListModel {
 
     // Step 4: tail = newNode
     this.tail = node;
-    if (doLayout) this.layout();
     steps.push(this.stepObj({
       description: `tail = newNode — tail updated to ${value}. List: ${this.toArray().join(" → ")}`,
       codeLine: 7,
@@ -194,10 +232,11 @@ export class LinkedListModel {
     return steps;
   }
 
-  insertAtPosition(value, pos, doLayout = true) {
-    if (pos <= 0) return this.insertAtHead(value, doLayout);
+  // ─────────────── INSERT AT POSITION ───────────────
+  insertAtPosition(value, pos) {
+    if (pos <= 0) return this.insertAtHead(value);
     const len = this.getLength();
-    if (pos >= len) return this.insertAtTail(value, doLayout);
+    if (pos >= len) return this.insertAtTail(value);
 
     const steps = [];
     const newNode = new ListNode(this.nodeCounter++, value);
@@ -220,7 +259,7 @@ export class LinkedListModel {
       action: "traverse",
     }));
 
-    // Traversal steps: for (int i = 0; i < pos - 1 && curr; i++) curr = curr->next
+    // Traversal steps
     while (idx < pos - 1 && curr) {
       curr = curr.next;
       idx++;
@@ -238,7 +277,7 @@ export class LinkedListModel {
     const prevNode = curr;
     curr = curr ? curr.next : null;
 
-    // Show the insertion point with prev, curr, and newNode labels
+    // Show the insertion point
     steps.push(this.stepObjWith([newNode], {
       description: `Insert ${value} at position ${pos} between ${prevNode ? prevNode.value : "head"} and ${curr ? curr.value : "tail"}`,
       codeLine: 5,
@@ -279,7 +318,6 @@ export class LinkedListModel {
     // Step: prev->next = newNode
     if (prevNode) prevNode.next = newNode;
     if (curr) curr.prev = newNode;
-    if (doLayout) this.layout();
     steps.push(this.stepObj({
       description: `prev->next = newNode — inserted ${value} at position ${pos}. List: ${this.toArray().join(" → ")}`,
       codeLine: 9,
@@ -290,7 +328,8 @@ export class LinkedListModel {
     return steps;
   }
 
-  deleteHead(doLayout = true) {
+  // ─────────────── DELETE HEAD ───────────────
+  deleteHead() {
     const steps = [];
     if (!this.head) return steps;
 
@@ -319,7 +358,7 @@ export class LinkedListModel {
       codeLine: 4,
       pointerLabels: { [oldHead.id]: "temp", ...(newHead ? { [newHead.id]: "head" } : {}) },
       action: "relink",
-    }));
+    }, { prepend: true }));
 
     // Step 3: delete temp
     steps.push(this.stepObjWith([oldHead], {
@@ -328,9 +367,7 @@ export class LinkedListModel {
       pointerLabels: { [oldHead.id]: "temp" },
       action: "delete",
       deleteId: oldHead.id,
-    }));
-
-    if (doLayout) this.layout();
+    }, { prepend: true }));
 
     // Step 4: done
     steps.push(this.stepObj({
@@ -345,12 +382,13 @@ export class LinkedListModel {
     return steps;
   }
 
-  deleteTail(doLayout = true) {
+  // ─────────────── DELETE TAIL ───────────────
+  deleteTail() {
     const steps = [];
     if (!this.head) return steps;
 
     if (this.head === this.tail) {
-      return this.deleteHead(doLayout);
+      return this.deleteHead();
     }
 
     const oldTail = this.tail;
@@ -389,8 +427,6 @@ export class LinkedListModel {
       deleteId: oldTail.id,
     }));
 
-    if (doLayout) this.layout();
-
     // Step 4: done
     steps.push(this.stepObj({
       description: newTail
@@ -404,7 +440,8 @@ export class LinkedListModel {
     return steps;
   }
 
-  deleteByValue(value, doLayout = true) {
+  // ─────────────── DELETE BY VALUE ───────────────
+  deleteByValue(value) {
     const steps = [];
     let curr = this.head;
     let idx = 0;
@@ -426,7 +463,7 @@ export class LinkedListModel {
         const next = curr.next;
 
         if (prev) {
-          // Step: temp = curr (temp points to target)
+          // Step: temp = curr
           steps.push(this.stepObj({
             description: `temp = curr — temp now points to node ${curr.value}`,
             codeLine: 3,
@@ -463,17 +500,16 @@ export class LinkedListModel {
             deleteId: curr.id,
           }));
 
-          if (doLayout) this.layout();
-
           // Step: done
           steps.push(this.stepObj({
             description: `Deleted node ${value}. List: ${this.toArray().join(" → ")}`,
             codeLine: 10,
-            pointerLabels: prev ? { [prev.id]: "head" } : {},
+            pointerLabels: {},
             action: "done",
           }));
         } else {
-          return this.deleteHead(doLayout);
+          // Target is the head — delegate
+          return this.deleteHead();
         }
 
         return steps;
@@ -493,7 +529,8 @@ export class LinkedListModel {
     return steps;
   }
 
-  reverse(doLayout = true) {
+  // ─────────────── REVERSE ───────────────
+  reverse() {
     const steps = [];
     if (!this.head || !this.head.next) {
       steps.push(this.stepObj({
@@ -505,6 +542,8 @@ export class LinkedListModel {
       return steps;
     }
 
+    // Keep a stable reference array so we can snapshot all nodes even as
+    // links are being rewired.
     const allRefs = [];
     let n = this.head;
     while (n) {
@@ -512,15 +551,11 @@ export class LinkedListModel {
       n = n.next;
     }
 
-    const snapFromRefs = () => allRefs.map((n) => ({
-      id: n.id,
-      value: n.value,
-      label: n.label,
-      x: n.x,
-      y: n.y,
-      nextId: n.next ? n.next.id : null,
-      prevId: n.prev ? n.prev.id : null,
-    }));
+    const snapFromRefs = () => {
+      // Layout the nodes in their current *display* order (allRefs order
+      // stays the original left-to-right, so positions are stable).
+      return snapshotData(allRefs, 900);
+    };
 
     let prev = null;
     let curr = this.head;
@@ -615,19 +650,19 @@ export class LinkedListModel {
     // Step: head = prev
     this.head = prev;
     if (this.head) this.head.prev = null;
-    if (doLayout) this.layout();
-    steps.push({
-      nodesSnapshot: snapFromRefs(),
+    this.layout();
+    steps.push(this.stepObj({
       description: `head = prev — new head is ${this.head.value}. List: ${this.toArray().join(" → ")}`,
       codeLine: 11,
       pointerLabels: { [this.head.id]: "head" },
       action: "done",
-    });
+    }));
 
     return steps;
   }
 
-  detectCycle(doLayout = true) {
+  // ─────────────── DETECT CYCLE (Floyd's) ───────────────
+  detectCycle() {
     const steps = [];
     if (!this.head || !this.head.next) {
       steps.push(this.stepObj({
@@ -639,15 +674,20 @@ export class LinkedListModel {
       return steps;
     }
 
-    // Create a temporary cycle: connect tail.next to a random middle node
+    // If the list doesn't already have a cycle, create a temporary one.
+    const hadCycle = this.hasCycle();
+    if (!hadCycle) {
+      const nodes = this.getAllNodes();
+      const cycleTarget = nodes[Math.floor(nodes.length / 2)];
+      this.tail.next = cycleTarget;
+    }
+
     const nodes = this.getAllNodes();
-    const cycleTarget = nodes[Math.floor(nodes.length / 2)];
-    this.tail.next = cycleTarget;
 
     steps.push(this.stepObj({
-      description: `Created cycle: tail (${this.tail.value}) → node (${cycleTarget.value}). Running Floyd's detection...`,
+      description: `Cycle present in list. Running Floyd's detection...`,
       codeLine: 2,
-      pointerLabels: { [this.tail.id]: "tail", [cycleTarget.id]: "target" },
+      pointerLabels: {},
       action: "traverse",
     }));
 
@@ -673,8 +713,10 @@ export class LinkedListModel {
           pointerLabels: { [slow.id]: "slow/fast" },
           action: "found",
         }));
-        // Remove the cycle
-        this.tail.next = null;
+        // Remove the cycle so list stays usable
+        if (!hadCycle) {
+          this.tail.next = null;
+        }
         return steps;
       }
 
@@ -691,7 +733,9 @@ export class LinkedListModel {
     }
 
     // Remove the cycle (safety)
-    this.tail.next = null;
+    if (!hadCycle) {
+      this.tail.next = null;
+    }
 
     steps.push(this.stepObj({
       description: "No cycle detected.",
@@ -703,7 +747,8 @@ export class LinkedListModel {
     return steps;
   }
 
-  getMiddle(doLayout = true) {
+  // ─────────────── FIND MIDDLE ───────────────
+  getMiddle() {
     const steps = [];
     if (!this.head) return steps;
 
@@ -721,7 +766,6 @@ export class LinkedListModel {
       slow = slow.next;
       fast = fast.next.next;
 
-      // FIX: check if fast is null before accessing fast.id
       const labels = {};
       if (slow) labels[slow.id] = "slow";
       if (fast) labels[fast.id] = "fast";
@@ -744,7 +788,8 @@ export class LinkedListModel {
     return steps;
   }
 
-  search(value, doLayout = true) {
+  // ─────────────── SEARCH ───────────────
+  search(value) {
     const steps = [];
     let curr = this.head;
     let idx = 0;
@@ -781,6 +826,7 @@ export class LinkedListModel {
     return steps;
   }
 
+  // ─────────────── UTILITIES ───────────────
   toArray() {
     const result = [];
     let curr = this.head;
@@ -806,14 +852,14 @@ export class LinkedListModel {
   }
 
   toNodesData() {
-    return snapshotData(this.getAllNodes());
+    return snapshotData(this.getAllNodes(), 900);
   }
 
   createCycle() {
     this.clear();
     for (let i = 0; i < 6; i++) {
       const val = Math.floor(Math.random() * 90) + 10;
-      this.insertAtTail(val, false);
+      this._rawInsertTail(val);
     }
 
     if (!this.head) return;
@@ -854,10 +900,10 @@ export class LinkedListModel {
     }
   }
 
-  layout(canvasWidth = 700) {
+  layout(canvasWidth = 900) {
     const nodes = this.getAllNodes();
     const totalWidth = nodes.length * 120 - 20;
-    const startX = Math.max(40, (canvasWidth - totalWidth) / 2);
+    const startX = Math.max(60, (canvasWidth - totalWidth) / 2);
     const y = 140;
 
     nodes.forEach((node, i) => {
